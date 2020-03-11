@@ -9,7 +9,7 @@
             "type": "cppvsdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/construction/3d-model-rasterization/rasterize-3d.exe",
-            "args": ["--model", "${workspaceFolder}/construction/3d-model-rasterization/models/dragon.obj"],
+            "args": ["--model", "${workspaceFolder}/construction/3d-model-rasterization/models/dragon.obj", "--show-stats"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
