@@ -248,10 +248,11 @@ set<vector<SpanningPair>> ModelGenerator::placePolygonsInLayer(set<const Polygon
                         if (pair.second.first->*member <= layerPosition &&
                             pair.second.second->*member > layerPosition)
                         {
+                            common_edge = pair.second;
+                            common_edge.surfaceInfo = currentPiece->surface;
                             currentPiece = adjacentPolygon;
                             placed.push_back(currentPiece);
                             unplacedPolygons.erase(it);
-                            common_edge = pair.second;
                             break;
                         }
                     }
@@ -268,6 +269,7 @@ set<vector<SpanningPair>> ModelGenerator::placePolygonsInLayer(set<const Polygon
                     assert(ret.first);
                     firstMatched = true;
                     common_edge = ret.second;
+                    common_edge.surfaceInfo = currentPiece->surface;
                 }
                 orderedPairs.push_back(common_edge);
             }

@@ -27,6 +27,8 @@ struct SpanningPair : std::pair<Point *, Point *>
     operator bool() const;
     static SpanningPair create(Point *a, Point *b, PointComparisonMethod lessThan);
     void print(std::ostream &out, const Point *first, bool printCoordinates = false) const;
+
+    SurfaceInfo *surfaceInfo{nullptr};
 };
 
 class ModelGenerator
