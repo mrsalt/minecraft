@@ -10,6 +10,11 @@ class SurfaceInfo
 class SolidColorSurface : public SurfaceInfo
 {
 public:
+    SolidColorSurface(int r, int g, int b)
+        : r{r}, g{g}, b{b}
+    {
+    }
+
     int r;
     int g;
     int b;
@@ -22,6 +27,8 @@ struct Point
     double y;
     double z;
     Size operator-(const Point &rhs);
+    Point &operator+=(const Point &rhs);
+    std::string toString() const;
     friend std::ostream &operator<<(std::ostream &out, const Point &);
 };
 
@@ -30,25 +37,9 @@ struct Size
     double width;
     double height;
     double depth;
+    std::string toString() const;
     friend std::ostream &operator<<(std::ostream &out, const Size &);
 };
-
-Size Point::operator-(const Point &rhs)
-{
-    return {x - rhs.x, y - rhs.y, z - rhs.z};
-}
-
-std::ostream &operator<<(std::ostream &out, const Point &p)
-{
-    out << "(x: " << p.x << ", y: " << p.y << ", z: " << p.z << ")";
-    return out;
-}
-
-std::ostream &operator<<(std::ostream &out, const Size &s)
-{
-    out << "(width: " << s.width << ", height: " << s.height << ", depth: " << s.depth << ")";
-    return out;
-}
 
 struct Polygon
 {
@@ -64,8 +55,12 @@ public:
         Point min;
         Point max;
         Size extent;
-        size_t count_vertices;
-        size_t count_polygons;
+        size_t count_vertices{0};
+        size_t count_polygons{0};
+        void addPoints(const std::vector<Point *> &);
+        void addPoints(const std::vector<Point> &);
+        void addPolygons(const std::vector<Polygon> &);
+
         friend std::ostream &operator<<(std::ostream &out, const Statistics &);
     };
 
@@ -85,37 +80,16 @@ public:
 
     virtual void setCurrentColor(int r, int g, int b)
     {
-        SolidColorSurface *s = new SolidColorSurface();
-        s->r = r;
-        s->g = g;
-        s->b = b;
+        SolidColorSurface *s = new SolidColorSurface(r, g, b);
         currentSurfaceInfo = s;
         surfaceInfos.push_back(s);
     }
 
-    Statistics getStatistics()
+    Statistics getStatistics() const
     {
         Statistics stats;
-        stats.count_vertices = points.size();
-        stats.count_polygons = polygons.size();
-        if (stats.count_vertices == 0) return stats;
-        stats.min = stats.max = points[0];
-        for (const Point &p : points)
-        {
-            if (p.x < stats.min.x)
-                stats.min.x = p.x;
-            if (p.y < stats.min.y)
-                stats.min.y = p.y;
-            if (p.z < stats.min.z)
-                stats.min.z = p.z;
-            if (p.x > stats.max.x)
-                stats.max.x = p.x;
-            if (p.y > stats.max.y)
-                stats.max.y = p.y;
-            if (p.z > stats.max.z)
-                stats.max.z = p.z;
-        }
-        stats.extent = stats.max - stats.min;
+        stats.addPoints(points);
+        stats.addPolygons(polygons);
         return stats;
     }
 
@@ -124,15 +98,3 @@ public:
     std::vector<SurfaceInfo *> surfaceInfos;
     SurfaceInfo *currentSurfaceInfo = nullptr;
 };
-
-std::ostream &operator<<(std::ostream &out, const ModelBuilder::Statistics &stats)
-{
-    out << "Model Statistics:" << std::endl;
-    out << "  Count of vertices: " << stats.count_vertices << std::endl;
-    out << "  Count of polygons: " << stats.count_polygons << std::endl;
-    if (stats.count_vertices == 0) return out;
-    out << "  Min: " << stats.min << std::endl;
-    out << "  Max: " << stats.max << std::endl;
-    out << "  Size: " << stats.extent << std::endl;
-    return out;
-}

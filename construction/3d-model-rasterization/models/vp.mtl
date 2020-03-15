@@ -1,0 +1,15 @@
+newmtl bone
+Ka 1.000 1.000 1.000     # white
+Kd 1.000 1.000 1.000     # white
+
+newmtl black
+Ka 0.000 0.000 0.000     # black
+Kd 0.000 0.000 0.000     # black
+
+newmtl ltbrown
+Ka 0.627 0.471 0.313
+Kd 0.627 0.471 0.313
+
+newmtl redbrown
+Ka 0.745 0.353 0.196
+Kd 0.745 0.353 0.196

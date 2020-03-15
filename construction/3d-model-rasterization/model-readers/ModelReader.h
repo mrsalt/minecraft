@@ -12,6 +12,5 @@ public:
 class ModelReader
 {
 public:
-    virtual bool canParse(const std::string &) = 0;
     virtual bool parse(const std::string &, ModelConsumer &) = 0;
 };

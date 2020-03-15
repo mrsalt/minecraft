@@ -1,27 +1,11 @@
-#include "ModelReader_CS5400.h"
+#include "ModelReader_Wavefront.h"
 #include <string.h>
 #include <iostream>
 #include <fstream>
 
 using namespace std;
 
-bool ModelReader_CS5400::canParse(const std::string &path)
-{
-	ifstream input(path);
-	if (!input)
-	{
-		cout << "Unable to open " << path << endl;
-		return false;
-	}
-	const char *prefix = "#  Viewpoint Datalabs International, Inc.  Copyright 1996";
-	char line[81];
-	input.getline(line, sizeof(line) - 1);
-
-	// OK, this is definitely a cheat, but this is only designed to recognize a single file.
-	return memcmp(prefix, line, strlen(prefix)) == 0;
-}
-
-bool ModelReader_CS5400::parse(const std::string &path, ModelConsumer &consumer)
+bool ModelReader_Wavefront::parse(const std::string &path, ModelConsumer &consumer)
 {
 	typedef unsigned char BYTE;
 	typedef unsigned short WORD;
@@ -46,13 +30,13 @@ bool ModelReader_CS5400::parse(const std::string &path, ModelConsumer &consumer)
 
 	while (fin >> type)
 	{
-		if (type == 'v')
+		if (type == 'v') // Geometric vertex
 		{
 			double x, y, z;
 			fin >> x >> y >> z;
 			consumer.verticeRead(x, y, z);
 		}
-		else if (type == 'f')
+		else if (type == 'f') //Vertex indices
 		{
 			fin.getline(line, 80);
 			int n = 0;
