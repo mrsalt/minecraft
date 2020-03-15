@@ -230,22 +230,25 @@ set<vector<SpanningPair>> ModelGenerator::placePolygonsInLayer(set<const Polygon
             bool firstMatched = false;
             while (!firstMatched)
             {
-                //size_t polygonNumber = currentPiece->polygon - source.polygons.data();
-                //cout << format("Trying to match polygon %s", currentPiece->toString(source).c_str()) << endl;
-
+                //cout << format("Trying to match %s", currentPiece->toString(source).c_str()) << endl;
                 SpanningPair common_edge;
-
-                for (it = unplacedPolygons.begin(); it != unplacedPolygons.end(); it++)
+                for (const Polygon *adjacentPolygon : source.getPolygonsAdjacentTo(currentPiece))
                 {
-                    auto pair = areAdjacent(*currentPiece, **it, pointOrderingMethod);
+                    auto it = unplacedPolygons.find(adjacentPolygon);
+                    //cout << format("  checking if %s is in unplaced polygon list", adjacentPolygon->toString(source).c_str()) << endl;
+                    if (it == unplacedPolygons.end())
+                        continue;
+                    //cout << format("  %s IS in unplaced polygon list", adjacentPolygon->toString(source).c_str()) << endl;
+                    auto pair = areAdjacent(*currentPiece, *adjacentPolygon, pointOrderingMethod);
                     if (pair.first)
                     {
-                        closestPiece = *it;
+                        //cout << format("  found adjacent polygon %s", adjacentPolygon->toString(source).c_str()) << endl;
+                        closestPiece = adjacentPolygon;
                         // common edge spans the plane:
                         if (pair.second.first->*member <= layerPosition &&
                             pair.second.second->*member > layerPosition)
                         {
-                            currentPiece = *it;
+                            currentPiece = adjacentPolygon;
                             placed.push_back(currentPiece);
                             unplacedPolygons.erase(it);
                             common_edge = pair.second;
@@ -255,6 +258,7 @@ set<vector<SpanningPair>> ModelGenerator::placePolygonsInLayer(set<const Polygon
                 }
                 if (!common_edge)
                 {
+                    assert(currentPiece != firstPiece);
                     auto ret = areAdjacent(*currentPiece, *firstPiece, pointOrderingMethod);
                     if (!ret.first)
                     {

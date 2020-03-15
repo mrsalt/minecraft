@@ -1,6 +1,7 @@
 #pragma once
 #include "model-readers\ModelReader.h"
 #include <ostream>
+#include <set>
 #include <vector>
 
 class SurfaceInfo
@@ -82,10 +83,13 @@ public:
         }
         p.surface = currentSurfaceInfo;
         polygons.push_back(p);
+        int polygonIndex = (int)polygons.size() - 1;
 
+        adjacent_polygons.resize(points.size());
         for (int n = 0; n < countVertices; n++)
         {
-            adjacent_polygons.at(vertices[n]).push_back(&polygons.back());
+            int verticeIndex = vertices[n];
+            adjacent_polygons.at(verticeIndex).push_back(polygonIndex);
         }
     }
 
@@ -104,9 +108,27 @@ public:
         return stats;
     }
 
+    std::set<const Polygon *> getPolygonsAdjacentTo(const Polygon *currentPiece) const
+    {
+        std::set<const Polygon *> adjacentPolygons;
+        for (Point *point : currentPiece->vertices)
+        {
+            size_t verticeIndice = point - points.data();
+            const std::vector<int> &polygonsAdjacentToPoint = adjacent_polygons.at(verticeIndice);
+            for (int index : polygonsAdjacentToPoint)
+            {
+                const Polygon *poly = polygons.data() + index;
+                if (poly == currentPiece)
+                    continue;
+                adjacentPolygons.insert(poly);
+            }
+        }
+        return adjacentPolygons;
+    }
+
     std::vector<Point> points;
     std::vector<Polygon> polygons;
-    std::vector<std::vector<Polygon*>> adjacent_polygons; // these are indexed by vertice index
+    std::vector<std::vector<int>> adjacent_polygons; // these are indexed by vertice index
     std::vector<SurfaceInfo *> surfaceInfos;
     SurfaceInfo *currentSurfaceInfo = nullptr;
 };
