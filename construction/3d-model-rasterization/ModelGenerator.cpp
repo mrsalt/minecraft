@@ -3,13 +3,9 @@
 #include "Arguments.h"
 #include "string_format.h"
 
-#include <algorithm>
 #include <assert.h>
-#include <iostream>
 #include <map>
-#include <set>
 #include <stdexcept>
-#include <vector>
 
 using namespace std;
 
@@ -60,38 +56,35 @@ void write_debug_model(
     const Polygon *currentPiece,
     double p);
 
-struct SpanningPair : pair<Point *, Point *>
+SpanningPair::SpanningPair()
+    : pair<Point *, Point *>{nullptr, nullptr}
 {
-    SpanningPair()
-        : pair<Point *, Point *>{nullptr, nullptr}
-    {
-    }
+}
 
-    SpanningPair(Point *a, Point *b)
-        : pair<Point *, Point *>{a, b}
-    {
-    }
+SpanningPair::SpanningPair(Point *a, Point *b)
+    : pair<Point *, Point *>{a, b}
+{
+}
 
-    operator bool() const
-    {
-        return first != nullptr && second != nullptr;
-    }
+SpanningPair::operator bool() const
+{
+    return first != nullptr && second != nullptr;
+}
 
-    static SpanningPair create(Point *a, Point *b, PointComparisonMethod lessThan)
-    {
-        if (lessThan(*a, *b))
-            return SpanningPair(a, b);
-        else
-            return SpanningPair(b, a);
-    }
+SpanningPair SpanningPair::create(Point *a, Point *b, PointComparisonMethod lessThan)
+{
+    if (lessThan(*a, *b))
+        return SpanningPair(a, b);
+    else
+        return SpanningPair(b, a);
+}
 
-    void print(ostream &out, const Point *first, bool printCoordinates = false) const
-    {
-        out << "#" << (this->first - first) + 1 << " - #" << (this->second - first) + 1;
-        if (printCoordinates)
-            out << " " << *this->first << ", " << *this->second;
-    }
-};
+void SpanningPair::print(ostream &out, const Point *first, bool printCoordinates) const
+{
+    out << "#" << (this->first - first) + 1 << " - #" << (this->second - first) + 1;
+    if (printCoordinates)
+        out << " " << *this->first << ", " << *this->second;
+}
 
 vector<SpanningPair> enumerateEdges(const Polygon *polygon, PointComparisonMethod aPrecedesB)
 {
@@ -182,95 +175,10 @@ void ModelGenerator::slicePolygonsAlongAxis(
 
         if (activePolygons.size())
         {
-            // PUZZLE ALGORITHM
-            // Create a set of unplaced polygons, which is a copy of active polygons.
-            // Think of these like floating puzzle pieces.
-            // 1. Take one unplaced polygon and remove it from the set of unplaced polygons.
-            //    Also, note it as the 'first' and 'current' polygon in the current set of
-            //    adjacent polygons.
-            // 2. Next, consider all other unplaced polygons to find any that border the
-            //    'current' polygon.
-            //    (Bordering polygons share adjacent vertices).
-            // 3. When an adjacent polygon is found, take the vertices that are shared, create
-            //    a SpanningPair, and add that SpanningPair to a vector representing the current
-            //    set of adjacent polygons.  Remove that adjacent polygon from the set of
-            //    unplaced polygons.  Consider the adjacent polygon as the 'current' polygon
-            //    and go back to step 2.
-            // 4. When no unplaced polygon can be matched, check and see if the current polygon
-            //    borders the 'first' polygon.  Add those shared vertices (spanning pair) to
-            //    the vector.  Add this vector to the set of shapes for this layer and go back
-            //    to step 1.
-
             set<const Polygon *> unplacedPolygons;
-            for (const auto & poly : activePolygons)
+            for (const auto &poly : activePolygons)
                 unplacedPolygons.insert(poly->polygon);
-            set<vector<SpanningPair>> shapes;
-            vector<const Polygon *> debug_completed_surfaces;
-
-            while (unplacedPolygons.size())
-            {
-                assert(unplacedPolygons.size() > 2); // it takes at least 3 unplaced polygons to make a shape.
-                auto it = unplacedPolygons.begin();
-                const Polygon *firstPiece = *it;
-                unplacedPolygons.erase(it);
-                vector<SpanningPair> orderedPairs;
-                vector<const Polygon *> placed;
-                placed.push_back(firstPiece);
-
-                try
-                {
-                    const Polygon *currentPiece = firstPiece;
-                    const Polygon *closestPiece = nullptr;
-                    bool firstMatched = false;
-                    while (!firstMatched)
-                    {
-                        //size_t polygonNumber = currentPiece->polygon - source.polygons.data();
-                        //cout << format("Trying to match polygon %s", currentPiece->toString(source).c_str()) << endl;
-
-                        SpanningPair common_edge;
-
-                        for (it = unplacedPolygons.begin(); it != unplacedPolygons.end(); it++)
-                        {
-                            auto pair = areAdjacent(*currentPiece, **it, pointOrderingMethod);
-                            if (pair.first)
-                            {
-                                closestPiece = *it;
-                                // common edge spans the plane:
-                                if (pair.second.first->*member <= p &&
-                                    pair.second.second->*member > p)
-                                {
-                                    currentPiece = *it;
-                                    placed.push_back(currentPiece);
-                                    unplacedPolygons.erase(it);
-                                    common_edge = pair.second;
-                                    break;
-                                }
-                            }
-                        }
-                        if (!common_edge)
-                        {
-                            auto ret = areAdjacent(*currentPiece, *firstPiece, pointOrderingMethod);
-                            if (!ret.first)
-                            {
-                                write_debug_model("debug", source, unplacedPolygons, firstPiece, placed, currentPiece, closestPiece, p);
-                                throw model_error(format("Unable to find match for polygon %s", currentPiece->toString(source).c_str()));
-                            }
-                            assert(ret.first);
-                            firstMatched = true;
-                            common_edge = ret.second;
-                        }
-                        orderedPairs.push_back(common_edge);
-                    }
-                }
-                catch (const model_error &e)
-                {
-                    std::cerr << e.what() << '\n';
-                    throw e;
-                }
-                shapes.insert(orderedPairs);
-                debug_completed_surfaces.insert(debug_completed_surfaces.end(), placed.begin(), placed.end());
-            }
-
+            auto shapes = placePolygonsInLayer(unplacedPolygons, p, source, member, pointOrderingMethod);
             cout << "For layer #" << l << ", " << shapes.size() << " separate shapes identified:" << endl;
             for (auto &list : shapes)
             {
@@ -278,6 +186,97 @@ void ModelGenerator::slicePolygonsAlongAxis(
             }
         }
     }
+}
+
+template <typename TMember>
+set<vector<SpanningPair>> ModelGenerator::placePolygonsInLayer(set<const Polygon *> &unplacedPolygons, const double layerPosition, const ModelBuilder &source, TMember member, PointComparisonMethod pointOrderingMethod)
+{
+    // PUZZLE ALGORITHM
+    // Create a set of unplaced polygons, which is a copy of active polygons.
+    // Think of these like floating puzzle pieces.
+    // 1. Take one unplaced polygon and remove it from the set of unplaced polygons.
+    //    Also, note it as the 'first' and 'current' polygon in the current set of
+    //    adjacent polygons.
+    // 2. Next, consider all other unplaced polygons to find any that border the
+    //    'current' polygon.
+    //    (Bordering polygons share adjacent vertices).
+    // 3. When an adjacent polygon is found, take the vertices that are shared, create
+    //    a SpanningPair, and add that SpanningPair to a vector representing the current
+    //    set of adjacent polygons.  Remove that adjacent polygon from the set of
+    //    unplaced polygons.  Consider the adjacent polygon as the 'current' polygon
+    //    and go back to step 2.
+    // 4. When no unplaced polygon can be matched, check and see if the current polygon
+    //    borders the 'first' polygon.  Add those shared vertices (spanning pair) to
+    //    the vector.  Add this vector to the set of shapes for this layer and go back
+    //    to step 1.
+
+    set<vector<SpanningPair>> shapes;
+    vector<const Polygon *> debug_completed_surfaces;
+
+    while (unplacedPolygons.size())
+    {
+        assert(unplacedPolygons.size() > 2); // it takes at least 3 unplaced polygons to make a shape.
+        auto it = unplacedPolygons.begin();
+        const Polygon *firstPiece = *it;
+        unplacedPolygons.erase(it);
+        vector<SpanningPair> orderedPairs;
+        vector<const Polygon *> placed;
+        placed.push_back(firstPiece);
+
+        try
+        {
+            const Polygon *currentPiece = firstPiece;
+            const Polygon *closestPiece = nullptr;
+            bool firstMatched = false;
+            while (!firstMatched)
+            {
+                //size_t polygonNumber = currentPiece->polygon - source.polygons.data();
+                //cout << format("Trying to match polygon %s", currentPiece->toString(source).c_str()) << endl;
+
+                SpanningPair common_edge;
+
+                for (it = unplacedPolygons.begin(); it != unplacedPolygons.end(); it++)
+                {
+                    auto pair = areAdjacent(*currentPiece, **it, pointOrderingMethod);
+                    if (pair.first)
+                    {
+                        closestPiece = *it;
+                        // common edge spans the plane:
+                        if (pair.second.first->*member <= layerPosition &&
+                            pair.second.second->*member > layerPosition)
+                        {
+                            currentPiece = *it;
+                            placed.push_back(currentPiece);
+                            unplacedPolygons.erase(it);
+                            common_edge = pair.second;
+                            break;
+                        }
+                    }
+                }
+                if (!common_edge)
+                {
+                    auto ret = areAdjacent(*currentPiece, *firstPiece, pointOrderingMethod);
+                    if (!ret.first)
+                    {
+                        write_debug_model("debug", source, unplacedPolygons, firstPiece, placed, currentPiece, closestPiece, layerPosition);
+                        throw model_error(format("Unable to find match for polygon %s", currentPiece->toString(source).c_str()));
+                    }
+                    assert(ret.first);
+                    firstMatched = true;
+                    common_edge = ret.second;
+                }
+                orderedPairs.push_back(common_edge);
+            }
+        }
+        catch (const model_error &e)
+        {
+            std::cerr << e.what() << '\n';
+            throw e;
+        }
+        shapes.insert(orderedPairs);
+        debug_completed_surfaces.insert(debug_completed_surfaces.end(), placed.begin(), placed.end());
+    }
+    return shapes;
 }
 
 double dist(const Point &a, const Point &b)
