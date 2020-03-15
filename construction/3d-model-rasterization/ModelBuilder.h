@@ -41,8 +41,12 @@ struct Size
     friend std::ostream &operator<<(std::ostream &out, const Size &);
 };
 
+class ModelBuilder;
+
 struct Polygon
 {
+    std::string toString(const ModelBuilder &source) const;
+
     SurfaceInfo *surface;
     std::vector<Point *> vertices;
 };
@@ -73,9 +77,16 @@ public:
     {
         Polygon p;
         for (int n = 0; n < countVertices; n++)
+        {
             p.vertices.push_back(points.data() + vertices[n]);
+        }
         p.surface = currentSurfaceInfo;
         polygons.push_back(p);
+
+        for (int n = 0; n < countVertices; n++)
+        {
+            adjacent_polygons.at(vertices[n]).push_back(&polygons.back());
+        }
     }
 
     virtual void setCurrentColor(int r, int g, int b)
@@ -95,6 +106,7 @@ public:
 
     std::vector<Point> points;
     std::vector<Polygon> polygons;
+    std::vector<std::vector<Polygon*>> adjacent_polygons; // these are indexed by vertice index
     std::vector<SurfaceInfo *> surfaceInfos;
     SurfaceInfo *currentSurfaceInfo = nullptr;
 };

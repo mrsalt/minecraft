@@ -48,16 +48,16 @@ PolygonBounds::PolygonBounds(const Polygon *polygon)
 
 string PolygonBounds::toString(const ModelBuilder &source) const
 {
-    return format("Polygon #%d, bounds: %s - %s", polygon - source.polygons.data(), min.toString().c_str(), max.toString().c_str());
+    return format("%s, bounds: %s - %s", polygon->toString(source).c_str(), min.toString().c_str(), max.toString().c_str());
 }
 
 void write_debug_model(
     const string &filename,
     const ModelBuilder &source,
-    const set<PolygonBounds *> &unplacedPolygons,
-    const PolygonBounds *firstPiece,
+    const set<const Polygon *> &unplacedPolygons,
+    const Polygon *firstPiece,
     const vector<const Polygon *> placed,
-    const PolygonBounds *currentPiece,
+    const Polygon *currentPiece,
     double p);
 
 struct SpanningPair : pair<Point *, Point *>
@@ -114,13 +114,13 @@ void print(ostream &out, const vector<SpanningPair> &list, const ModelBuilder &s
     }
 }
 
-pair<bool, SpanningPair> areAdjacent(const PolygonBounds &first, const PolygonBounds &second, PointComparisonMethod aPrecedesB)
+pair<bool, SpanningPair> areAdjacent(const Polygon &first, const Polygon &second, PointComparisonMethod aPrecedesB)
 {
     Point *common_vertices[2];
     size_t count_common = 0;
-    for (auto p1 : first.polygon->vertices)
+    for (auto p1 : first.vertices)
     {
-        for (auto p2 : second.polygon->vertices)
+        for (auto p2 : second.vertices)
         {
             if (p1 == p2)
             {
@@ -201,7 +201,9 @@ void ModelGenerator::slicePolygonsAlongAxis(
             //    the vector.  Add this vector to the set of shapes for this layer and go back
             //    to step 1.
 
-            set<PolygonBounds *> unplacedPolygons = activePolygons;
+            set<const Polygon *> unplacedPolygons;
+            for (const auto & poly : activePolygons)
+                unplacedPolygons.insert(poly->polygon);
             set<vector<SpanningPair>> shapes;
             vector<const Polygon *> debug_completed_surfaces;
 
@@ -209,16 +211,16 @@ void ModelGenerator::slicePolygonsAlongAxis(
             {
                 assert(unplacedPolygons.size() > 2); // it takes at least 3 unplaced polygons to make a shape.
                 auto it = unplacedPolygons.begin();
-                PolygonBounds *firstPiece = *it;
+                const Polygon *firstPiece = *it;
                 unplacedPolygons.erase(it);
                 vector<SpanningPair> orderedPairs;
                 vector<const Polygon *> placed;
-                placed.push_back(firstPiece->polygon);
+                placed.push_back(firstPiece);
 
                 try
                 {
-                    PolygonBounds *currentPiece = firstPiece;
-                    PolygonBounds *closestPiece = nullptr;
+                    const Polygon *currentPiece = firstPiece;
+                    const Polygon *closestPiece = nullptr;
                     bool firstMatched = false;
                     while (!firstMatched)
                     {
@@ -226,6 +228,7 @@ void ModelGenerator::slicePolygonsAlongAxis(
                         //cout << format("Trying to match polygon %s", currentPiece->toString(source).c_str()) << endl;
 
                         SpanningPair common_edge;
+
                         for (it = unplacedPolygons.begin(); it != unplacedPolygons.end(); it++)
                         {
                             auto pair = areAdjacent(*currentPiece, **it, pointOrderingMethod);
@@ -237,7 +240,7 @@ void ModelGenerator::slicePolygonsAlongAxis(
                                     pair.second.second->*member > p)
                                 {
                                     currentPiece = *it;
-                                    placed.push_back(currentPiece->polygon);
+                                    placed.push_back(currentPiece);
                                     unplacedPolygons.erase(it);
                                     common_edge = pair.second;
                                     break;
@@ -299,11 +302,11 @@ Point center(const Polygon *p)
 void write_debug_model(
     const string &filename,
     const ModelBuilder &source,
-    const set<PolygonBounds *> &unplacedPolygons,
-    const PolygonBounds *firstPiece,
+    const set<const Polygon *> &unplacedPolygons,
+    const Polygon *firstPiece,
     const vector<const Polygon *> placed,
-    const PolygonBounds *currentPiece,
-    const PolygonBounds *closestPiece,
+    const Polygon *currentPiece,
+    const Polygon *closestPiece,
     double p)
 {
     // let's write a 3d model to help visualize the state of things...
@@ -317,17 +320,17 @@ void write_debug_model(
     vector<const Polygon *> vector_unplaced_poly;
     for (auto &up : unplacedPolygons)
     {
-        if (up != closestPiece && dist(center(up->polygon), center(currentPiece->polygon)) < 1.0)
-            vector_unplaced_poly.push_back(up->polygon);
+        if (up != closestPiece && dist(center(up), center(currentPiece)) < 1.0)
+            vector_unplaced_poly.push_back(up);
     }
     vector<pair<SolidColorSurface, vector<const Polygon *>>> debug_surfaces;
     //debug_surfaces.push_back({gray, debug_completed_surfaces});
-    debug_surfaces.push_back({blue, {firstPiece->polygon}});
+    debug_surfaces.push_back({blue, {firstPiece}});
     debug_surfaces.push_back({white, {++placed.begin(), placed.end()}});
-    debug_surfaces.push_back({green, {currentPiece->polygon}});
+    debug_surfaces.push_back({green, {currentPiece}});
     debug_surfaces.push_back({red, vector_unplaced_poly});
     if (closestPiece)
-        debug_surfaces.push_back({purple, {closestPiece->polygon}});
+        debug_surfaces.push_back({purple, {closestPiece}});
 
     cout << "Writing 3D model debug.obj to visualize polygons." << endl;
     ModelWriter_Wavefront model_writer(args.output_directory, filename);

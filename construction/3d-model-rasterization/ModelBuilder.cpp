@@ -39,6 +39,11 @@ ostream &operator<<(ostream &out, const Size &s)
     return out;
 }
 
+string Polygon::toString(const ModelBuilder &source) const
+{
+    return format("Polygon #%d", this - source.polygons.data());
+}
+
 ostream &operator<<(ostream &out, const ModelBuilder::Statistics &stats)
 {
     out << "Model Statistics:" << endl;
