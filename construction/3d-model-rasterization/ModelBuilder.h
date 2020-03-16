@@ -1,4 +1,5 @@
 #pragma once
+#include "Color.h"
 #include "model-readers\ModelReader.h"
 #include <ostream>
 #include <set>
@@ -6,38 +7,36 @@
 
 class SurfaceInfo
 {
+public:
+    virtual Color getRGB() const = 0;
 };
 
-class SolidColorSurface : public SurfaceInfo
+class SolidColorSurface : public SurfaceInfo, public Color
 {
 public:
-    SolidColorSurface(int r, int g, int b)
-        : r{r}, g{g}, b{b}
+    SolidColorSurface(Color c)
+        : Color{c}
     {
     }
 
-    int r;
-    int g;
-    int b;
-};
-
-struct Size;
-struct Point
-{
-    double x;
-    double y;
-    double z;
-    Size operator-(const Point &rhs);
-    Point &operator+=(const Point &rhs);
-    std::string toString() const;
-    friend std::ostream &operator<<(std::ostream &out, const Point &);
+    virtual Color getRGB() const override { return *this; }
 };
 
 struct Size
 {
-    double width;
-    double height;
-    double depth;
+    Size()
+        : width(0), height(0), depth(0)
+    {
+    }
+
+    explicit Size(const Point &p)
+        : width(p.x), height(p.y), depth(p.z)
+    {
+    }
+
+    double width{0};
+    double height{0};
+    double depth{0};
     std::string toString() const;
     friend std::ostream &operator<<(std::ostream &out, const Size &);
 };
@@ -69,9 +68,9 @@ public:
         friend std::ostream &operator<<(std::ostream &out, const Statistics &);
     };
 
-    virtual void verticeRead(double x, double y, double z)
+    virtual void verticeRead(const Point &p)
     {
-        points.push_back({x, y, z});
+        points.push_back(p);
     }
 
     virtual void polygonRead(int vertices[], int countVertices)
@@ -93,9 +92,9 @@ public:
         }
     }
 
-    virtual void setCurrentColor(int r, int g, int b)
+    virtual void setCurrentColor(const Color &c)
     {
-        SolidColorSurface *s = new SolidColorSurface(r, g, b);
+        SolidColorSurface *s = new SolidColorSurface(c);
         currentSurfaceInfo = s;
         surfaceInfos.push_back(s);
     }

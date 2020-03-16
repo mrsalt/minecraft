@@ -9,45 +9,31 @@ enum class Required
     FALSE
 };
 
+enum class Type
+{
+    UNDEFINED = 0,
+    STRING,
+    INTEGER,
+    BOOL_FLAG
+};
+
 class ArgumentParser
 {
 public:
-    enum Type
+    template <Type ARG_TYPE, typename STORAGE>
+    void addArgument(const std::string &long_arg, const std::string &short_arg, const std::string &help, STORAGE * dest, Required required = Required::FALSE)
     {
-        UNDEFINED = 0,
-        STRING,
-        INTEGER,
-        BOOL_FLAG
-    };
-
-    void addArgument(const std::string long_arg, const std::string short_arg, const std::string &help, std::string *dest, Required required = Required::FALSE)
-    {
-        auto arg = std::make_unique<Argument>(long_arg, short_arg, help, required);
-        arg->type = Type::STRING;
-        arg->value.string_value = dest;
-        arguments.push_back(std::move(arg));
-    }
-
-    void addArgument(const std::string long_arg, const std::string short_arg, const std::string &help, int *dest, Required required = Required::FALSE)
-    {
-        auto arg = std::make_unique<Argument>(long_arg, short_arg, help, required);
-        arg->type = Type::INTEGER;
-        arg->value.int_value = dest;
-        arguments.push_back(std::move(arg));
-    }
-
-    void addArgument(const std::string long_arg, const std::string short_arg, const std::string &help, bool *dest)
-    {
-        auto arg = std::make_unique<Argument>(long_arg, short_arg, help, Required::FALSE);
-        arg->type = Type::BOOL_FLAG;
-        arg->value.bool_value = dest;
-        arguments.push_back(std::move(arg));
+        Argument<STORAGE> * arg = new Argument<STORAGE>(long_arg, short_arg, help, required);
+        arg->type = ARG_TYPE;
+        arg->value = dest;
+        arguments.push_back(arg);
     }
 
     void printArgs(Required type)
     {
-        for (auto &arg : arguments)
+        for (auto &a : arguments)
         {
+            Argument<void> *arg = reinterpret_cast<Argument<void> *>(a);
             if (arg->required == type)
             {
                 std::cout << arg->short_arg << " " << arg->long_arg << std::endl;
@@ -59,9 +45,12 @@ public:
     virtual void printHelp()
     {
         int required = 0;
-        for (auto &arg : arguments)
+        for (auto &a : arguments)
+        {
+            Argument<void> *arg = reinterpret_cast<Argument<void> *>(a);
             if (arg->required == Required::TRUE)
                 required++;
+        }
         int optional = (int)arguments.size() - required;
         if (required)
         {
@@ -85,42 +74,53 @@ public:
                 printHelp();
                 return false;
             }
-            for (auto &arg : arguments)
+            for (auto &a : arguments)
             {
+                Argument<void> *arg = reinterpret_cast<Argument<void> *>(a);
                 if (current_arg == arg->long_arg || current_arg == arg->short_arg)
                 {
                     switch (arg->type)
                     {
                     case Type::STRING:
+                    {
                         i++;
+                        auto string_arg = reinterpret_cast<Argument<std::string> *>(arg);
                         if (i == argc)
                         {
-                            std::cout << arg->long_arg << " requires another argument." << std::endl;
+                            std::cout << string_arg->long_arg << " requires another argument." << std::endl;
                             return false;
                         }
-                        *arg->value.string_value = argv[i];
-                        arg->assigned = true;
+                        *string_arg->value = argv[i];
+                        string_arg->assigned = true;
                         break;
+                    }
                     case Type::INTEGER:
+                    {
                         i++;
+                        auto int_arg = reinterpret_cast<Argument<int> *>(arg);
                         if (i == argc)
                         {
                             std::cout << arg->long_arg << " requires another argument." << std::endl;
                             return false;
                         }
-                        *arg->value.int_value = strtol(argv[i], nullptr, 10);
-                        arg->assigned = true;
+                        *int_arg->value = strtol(argv[i], nullptr, 10);
+                        int_arg->assigned = true;
                         break;
+                    }
                     case Type::BOOL_FLAG:
-                        *arg->value.bool_value = true;
-                        arg->assigned = true;
+                    {
+                        auto bool_arg = reinterpret_cast<Argument<bool> *>(arg);
+                        *bool_arg->value = true;
+                        bool_arg->assigned = true;
                         break;
+                    }
                     }
                 }
             }
         }
-        for (auto &arg : arguments)
+        for (auto &a : arguments)
         {
+            Argument<void> *arg = reinterpret_cast<Argument<void> *>(a);
             if (!arg->assigned && arg->required == Required::TRUE)
             {
                 std::cout << arg->long_arg << " is a required argument." << std::endl;
@@ -130,15 +130,11 @@ public:
         return true;
     }
 
+    template <typename STORAGE>
     class Argument
     {
     public:
-        union Value {
-            std::string *string_value;
-            int *int_value;
-            bool *bool_value;
-        };
-        Value value;
+        STORAGE *value;
         Type type;
         const std::string long_arg;
         const std::string short_arg;
@@ -151,5 +147,5 @@ public:
         {
         }
     };
-    std::vector<std::unique_ptr<Argument>> arguments;
+    std::vector<void *> arguments;
 };

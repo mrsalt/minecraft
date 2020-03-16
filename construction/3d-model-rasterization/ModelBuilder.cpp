@@ -4,9 +4,19 @@
 
 using namespace std;
 
-Size Point::operator-(const Point &rhs)
+Point Point::operator-(const Point &rhs) const
 {
     return {x - rhs.x, y - rhs.y, z - rhs.z};
+}
+
+Point Point::operator+(const Point &rhs) const
+{
+    return {x + rhs.x, y + rhs.y, z + rhs.z};
+}
+
+Point Point::operator*(double scalar) const
+{
+    return {x * scalar, y * scalar, z * scalar};
 }
 
 Point & Point::operator+=(const Point &rhs)
@@ -80,7 +90,7 @@ void ModelBuilder::Statistics::addPoints(const vector<Point *> &points)
         else if (p.z > max.z)
             max.z = p.z;
     }
-    extent = max - min;
+    extent = Size(max - min);
 }
 
 void ModelBuilder::Statistics::addPoints(const vector<Point> &points)
@@ -105,7 +115,7 @@ void ModelBuilder::Statistics::addPoints(const vector<Point> &points)
         else if (p.z > max.z)
             max.z = p.z;
     }
-    extent = max - min;
+    extent = Size(max - min);
 }
 
 void ModelBuilder::Statistics::addPolygons(const vector<Polygon> &polygons)

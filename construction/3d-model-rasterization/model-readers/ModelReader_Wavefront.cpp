@@ -7,34 +7,26 @@ using namespace std;
 
 bool ModelReader_Wavefront::parse(const std::string &path, ModelConsumer &consumer)
 {
-	typedef unsigned char BYTE;
-	typedef unsigned short WORD;
-	typedef unsigned long DWORD;
-	typedef DWORD COLORREF;
-#define RGB(r, g, b) ((COLORREF)(((BYTE)(r) | ((WORD)((BYTE)(g)) << 8)) | (((DWORD)(BYTE)(b)) << 16)))
-#define GetRValue(rgb) (rgb & 0xff)
-#define GetGValue(rgb) ((rgb & 0xff00) >> 8)
-#define GetBValue(rgb) ((rgb & 0xff0000) >> 16)
-
 	ifstream fin(path);
 	char line[81];
 	char type;
 	int numbers[10];
 	int wShape = 0;
-	COLORREF color = RGB(0, 255, 0);
+
+	// TODO: replace these hard coded colors with code to read the .mtl file, which defines the colors.
 	int nColors = 9;
 	char *colors[] = {"glass", "bone", "fldkdkgrey", "redbrick", "black", "brass", "dkdkgrey", "ltbrown", "redbrown"};
-	COLORREF colorValues[] = {RGB(200, 200, 255), RGB(240, 240, 255), RGB(100, 100, 100),
-							  RGB(200, 80, 80), RGB(50, 50, 50), RGB(100, 200, 200),
-							  RGB(120, 120, 120), RGB(160, 120, 80), RGB(190, 90, 50)}; //RGB(190,90,50)};
+	Color colorValues[] = {{200, 200, 255}, {240, 240, 255}, {100, 100, 100},
+							  {200, 80, 80}, {50, 50, 50}, {100, 200, 200},
+							  {120, 120, 120}, {160, 120, 80}, {190, 90, 50} }; //RGB(190,90,50)};
 
 	while (fin >> type)
 	{
 		if (type == 'v') // Geometric vertex
 		{
-			double x, y, z;
-			fin >> x >> y >> z;
-			consumer.verticeRead(x, y, z);
+			Point p;
+			fin >> p.x >> p.y >> p.z;
+			consumer.verticeRead(p);
 		}
 		else if (type == 'f') //Vertex indices
 		{
@@ -69,8 +61,7 @@ bool ModelReader_Wavefront::parse(const std::string &path, ModelConsumer &consum
 				{
 					if (strcmp(&line[6], colors[i]) == 0)
 					{
-						color = colorValues[i];
-						consumer.setCurrentColor(GetRValue(color), GetGValue(color), GetBValue(color));
+						consumer.setCurrentColor(colorValues[i]);
 						break;
 					}
 				}

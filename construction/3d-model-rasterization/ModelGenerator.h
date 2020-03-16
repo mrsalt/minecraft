@@ -46,6 +46,8 @@ private:
         const ModelBuilder &source,
         const ModelBuilder::Statistics &stats,
         TMember member,
+        TMember _2D_xaxis,
+        TMember _3D_yaxis,
         PolygonComparisonMethod polyOrderingMethod,
         PointComparisonMethod pointOrderingMethod);
     template <typename TMember>
@@ -58,4 +60,6 @@ private:
 
 private:
     double modelHeight{0.0};
+
+    ModelBuilder cross_model;
 };

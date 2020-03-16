@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/build/construction/3d-model-rasterization/rasterize-3d.exe",
             "args": ["--model-height", "30",
-                     "--model-file", "${workspaceFolder}/construction/3d-model-rasterization/models/dragon.obj", "--show-stats"],
+                     "--model-file", "${workspaceFolder}/construction/3d-model-rasterization/models/dragon.obj", "--show-stats", "--output-cross-model"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],

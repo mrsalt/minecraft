@@ -86,16 +86,6 @@ void SpanningPair::print(ostream &out, const Point *first, bool printCoordinates
         out << " " << *this->first << ", " << *this->second;
 }
 
-vector<SpanningPair> enumerateEdges(const Polygon *polygon, PointComparisonMethod aPrecedesB)
-{
-    vector<SpanningPair> edges;
-    const auto &vertices = polygon->vertices;
-    for (size_t i = 0; i < vertices.size() - 1; i++)
-        edges.push_back(SpanningPair::create(vertices[i], vertices[i + 1], aPrecedesB));
-    edges.push_back(SpanningPair::create(vertices[vertices.size() - 1], vertices[0], aPrecedesB));
-    return edges;
-}
-
 void print(ostream &out, const vector<SpanningPair> &list, const ModelBuilder &source)
 {
     out << "list @" << &list << endl;
@@ -133,6 +123,15 @@ pair<bool, SpanningPair> areAdjacent(const Polygon &first, const Polygon &second
 }
 
 template <typename TMember>
+Point projectLineOntoPlane(const Point &pMin, const Point &pMax, double planeValue, TMember member)
+{
+    //https://www.youtube.com/watch?v=qVvvy5hsQwk
+    Point pVec = pMax - pMin;
+    double t = (planeValue - pMin.*member) / pVec.*member;
+    return pMin + pVec * t;
+}
+
+template <typename TMember>
 void ModelGenerator::slicePolygonsAlongAxis(
     vector<PolygonBounds> &polyBounds,
     const double layerDist,
@@ -140,17 +139,21 @@ void ModelGenerator::slicePolygonsAlongAxis(
     const ModelBuilder &source,
     const ModelBuilder::Statistics &stats,
     TMember member,
+    TMember _2D_xaxis,
+    TMember _3D_yaxis,
     PolygonComparisonMethod polyOrderingMethod,
     PointComparisonMethod pointOrderingMethod)
 {
     std::sort(polyBounds.begin(), polyBounds.end(), polyOrderingMethod);
+
+    cout << "For axis " << (member == &Point::x ? "x" : member == &Point::y ? "y" : member == &Point::z ? "z" : "?")
+         << " there are " << layerCount << " layers to generate." << endl;
 
     set<PolygonBounds *> activePolygons;
     int nextPoly = 0;
     for (int l = 0; l <= layerCount; l++)
     {
         double p = stats.min.*member + l * layerDist;
-        cout << "Finding intersecting polygons at p = " << p << endl;
 
         // look at activePolygons and see which ones are no longer intersecting the plane:
         vector<PolygonBounds *> toRemove;
@@ -173,16 +176,38 @@ void ModelGenerator::slicePolygonsAlongAxis(
             nextPoly++;
         }
 
+        cout << "  at layer #" << l << " (position: " << p << ") there are " << activePolygons.size() << " polygons to place." << endl;
         if (activePolygons.size())
         {
             set<const Polygon *> unplacedPolygons;
             for (const auto &poly : activePolygons)
                 unplacedPolygons.insert(poly->polygon);
-            auto shapes = placePolygonsInLayer(unplacedPolygons, p, source, member, pointOrderingMethod);
-            cout << "For layer #" << l << ", " << shapes.size() << " separate shapes identified:" << endl;
+            set<vector<SpanningPair>> shapes = placePolygonsInLayer(unplacedPolygons, p, source, member, pointOrderingMethod);
+            cout << "    " << shapes.size() << " separate shapes identified (cross section areas)." << endl;
             for (auto &list : shapes)
             {
-                print(cout, list, source);
+                vector<int> cross_model_points;
+                //print(cout, list, source);
+                for (const auto &line : list)
+                {
+                    Point pPlane = projectLineOntoPlane(*line.first, *line.second, p, member);
+                    assert(abs(pPlane.*member - p) < 0.000001);
+                    double x = pPlane.*_2D_xaxis;
+                    double y = pPlane.*_3D_yaxis;
+                    //line.surfaceInfo;
+
+                    if (args.output_cross_model)
+                    {
+                        cross_model_points.push_back((int)cross_model.points.size());
+                        cross_model.verticeRead(pPlane);
+                    }
+                }
+
+                if (args.output_cross_model)
+                {
+                    // TODO: break this bad boy up into many smaller polygons
+                    cross_model.polygonRead(cross_model_points.data(), (int)cross_model_points.size());
+                }
             }
         }
     }
@@ -315,12 +340,12 @@ void write_debug_model(
     double p)
 {
     // let's write a 3d model to help visualize the state of things...
-    SolidColorSurface gray(100, 100, 100);  // completed sections
-    SolidColorSurface blue(50, 50, 150);    // head of current section
-    SolidColorSurface white(255, 255, 255); // current section, middle pieces
-    SolidColorSurface green(50, 150, 50);   // current polygon
-    SolidColorSurface red(150, 50, 50);     // unplaced polygons
-    SolidColorSurface purple(128, 0, 128);  // closest piece
+    SolidColorSurface gray({100, 100, 100});  // completed sections
+    SolidColorSurface blue({50, 50, 150});    // head of current section
+    SolidColorSurface white({255, 255, 255}); // current section, middle pieces
+    SolidColorSurface green({50, 150, 50});   // current polygon
+    SolidColorSurface red({150, 50, 50});     // unplaced polygons
+    SolidColorSurface purple({128, 0, 128});  // closest piece
 
     vector<const Polygon *> vector_unplaced_poly;
     for (auto &up : unplacedPolygons)
@@ -379,13 +404,56 @@ void ModelGenerator::generate(const ModelBuilder &source)
         polyBounds.push_back(PolygonBounds(&polygon));
     }
 
+    Point *point_data = nullptr;
+    if (args.output_cross_model)
+    {
+        cross_model.points.reserve(1000000);
+        point_data = cross_model.points.data();
+        cross_model.setCurrentColor({255, 100, 100});
+    }
     slicePolygonsAlongAxis(
         polyBounds, layerDist, (int)(stats.extent.width / layerDist), source, stats,
         &Point::x,
+        &Point::z,
+        &Point::y,
         [](const PolygonBounds &a, const PolygonBounds &b) {
             return a.min.x < b.min.x;
         },
         [](const Point &a, const Point &b) {
             return a.x < b.x;
         });
+    if (args.output_cross_model)
+        cross_model.setCurrentColor({100, 255, 100});
+    slicePolygonsAlongAxis(
+        polyBounds, layerDist, (int)(stats.extent.height / layerDist), source, stats,
+        &Point::y,
+        &Point::x,
+        &Point::z,
+        [](const PolygonBounds &a, const PolygonBounds &b) {
+            return a.min.y < b.min.y;
+        },
+        [](const Point &a, const Point &b) {
+            return a.y < b.y;
+        });
+    if (args.output_cross_model)
+        cross_model.setCurrentColor({100, 100, 255});
+    slicePolygonsAlongAxis(
+        polyBounds, layerDist, (int)(stats.extent.depth / layerDist), source, stats,
+        &Point::z,
+        &Point::x,
+        &Point::y,
+        [](const PolygonBounds &a, const PolygonBounds &b) {
+            return a.min.z < b.min.z;
+        },
+        [](const Point &a, const Point &b) {
+            return a.z < b.z;
+        });
+    if (args.output_cross_model)
+    {
+        if (point_data != cross_model.points.data())
+            // TODO: reimplement ModelBuilder so that points can be re-allocated while polygons are being added.
+            throw runtime_error("Data for vertices has been re-allocated.  Cannot write cross model.");
+        ModelWriter_Wavefront writer(args.output_directory, "cross-model");
+        writer.write(cross_model);
+    }
 }
