@@ -2,6 +2,8 @@
 
 include_directories(
     .
+    generation
+    geometry
     model-readers
     model-writers
 )
@@ -9,7 +11,13 @@ include_directories(
 add_executable(rasterize-3d
     main.cpp
     ModelBuilder.cpp
-    ModelGenerator.cpp
+    generation/debug.cpp
+    generation/ModelGenerator.cpp
+    geometry/geometry.cpp
+    geometry/LineSegment.cpp
+    geometry/Point.cpp
+    geometry/Polygon.cpp
+    geometry/Size.cpp
     model-readers/ModelReader_Wavefront.cpp
     model-writers/ModelWriter_Wavefront.cpp
 )

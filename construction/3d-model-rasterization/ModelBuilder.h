@@ -1,55 +1,12 @@
 #pragma once
-#include "Color.h"
-#include "model-readers\ModelReader.h"
-#include <ostream>
+
+#include "Polygon.h"
+#include "ModelReader.h"
+#include "Size.h"
+#include "Surface.h"
+
 #include <set>
 #include <vector>
-
-class SurfaceInfo
-{
-public:
-    virtual Color getRGB() const = 0;
-};
-
-class SolidColorSurface : public SurfaceInfo, public Color
-{
-public:
-    SolidColorSurface(Color c)
-        : Color{c}
-    {
-    }
-
-    virtual Color getRGB() const override { return *this; }
-};
-
-struct Size
-{
-    Size()
-        : width(0), height(0), depth(0)
-    {
-    }
-
-    explicit Size(const Point &p)
-        : width(p.x), height(p.y), depth(p.z)
-    {
-    }
-
-    double width{0};
-    double height{0};
-    double depth{0};
-    std::string toString() const;
-    friend std::ostream &operator<<(std::ostream &out, const Size &);
-};
-
-class ModelBuilder;
-
-struct Polygon
-{
-    std::string toString(const ModelBuilder &source) const;
-
-    SurfaceInfo *surface;
-    std::vector<Point *> vertices;
-};
 
 class ModelBuilder : public ModelConsumer
 {

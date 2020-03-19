@@ -1,5 +1,6 @@
+#include "debug.h"
 #include "ModelGenerator.h"
-#include "model-writers/ModelWriter_Wavefront.h"
+#include "ModelWriter_Wavefront.h"
 #include "Arguments.h"
 #include "string_format.h"
 
@@ -19,83 +20,6 @@ public:
     {
     }
 };
-
-PolygonBounds::PolygonBounds(const Polygon *polygon)
-    : polygon(polygon)
-{
-    min = max = *polygon->vertices[0];
-    for (size_t i = polygon->vertices.size() - 1; i > 0; i--)
-    {
-        Point &p = *polygon->vertices[i];
-        if (p.x < min.x)
-            min.x = p.x;
-        if (p.x > max.x)
-            max.x = p.x;
-        if (p.y < min.y)
-            min.y = p.y;
-        if (p.y > max.y)
-            max.y = p.y;
-        if (p.z < min.z)
-            min.z = p.z;
-        if (p.z > max.z)
-            max.z = p.z;
-    }
-}
-
-string PolygonBounds::toString(const ModelBuilder &source) const
-{
-    return format("%s, bounds: %s - %s", polygon->toString(source).c_str(), min.toString().c_str(), max.toString().c_str());
-}
-
-void write_debug_model(
-    const string &filename,
-    const ModelBuilder &source,
-    const set<const Polygon *> &unplacedPolygons,
-    const Polygon *firstPiece,
-    const vector<const Polygon *> placed,
-    const Polygon *currentPiece,
-    double p);
-
-LineSegment::LineSegment()
-    : pair<Point *, Point *>{nullptr, nullptr}
-{
-}
-
-LineSegment::LineSegment(Point *a, Point *b)
-    : pair<Point *, Point *>{a, b}
-{
-}
-
-LineSegment::operator bool() const
-{
-    return first != nullptr && second != nullptr;
-}
-
-LineSegment LineSegment::create(Point *a, Point *b, PointComparisonMethod lessThan)
-{
-    if (lessThan(*a, *b))
-        return LineSegment(a, b);
-    else
-        return LineSegment(b, a);
-}
-
-void LineSegment::print(ostream &out, const Point *first, bool printCoordinates) const
-{
-    out << "#" << (this->first - first) + 1 << " - #" << (this->second - first) + 1;
-    if (printCoordinates)
-        out << " " << *this->first << ", " << *this->second;
-}
-
-void print(ostream &out, const vector<LineSegment> &list, const ModelBuilder &source)
-{
-    out << "list @" << &list << endl;
-    for (auto &sp : list)
-    {
-        out << "  ";
-        sp.print(cout, source.points.data());
-        out << endl;
-    }
-}
 
 pair<bool, LineSegment> areAdjacent(const Polygon &first, const Polygon &second, PointComparisonMethod aPrecedesB)
 {
@@ -314,86 +238,6 @@ set<vector<LineSegment>> ModelGenerator::placePolygonsInLayer(set<const Polygon 
         debug_completed_surfaces.insert(debug_completed_surfaces.end(), placed.begin(), placed.end());
     }
     return shapes;
-}
-
-double dist(const Point &a, const Point &b)
-{
-    double dx = (a.x - b.x);
-    double dy = (a.y - b.y);
-    double dz = (a.z - b.z);
-    return sqrt(dx * dx + dy * dy + dz * dz);
-}
-
-Point center(const Polygon *p)
-{
-    Point a{0, 0, 0};
-    for (auto &v : p->vertices)
-        a += *v;
-    a.x /= (double)p->vertices.size();
-    a.y /= (double)p->vertices.size();
-    a.z /= (double)p->vertices.size();
-    return a;
-}
-
-void write_debug_model(
-    const string &filename,
-    const ModelBuilder &source,
-    const set<const Polygon *> &unplacedPolygons,
-    const Polygon *firstPiece,
-    const vector<const Polygon *> placed,
-    const Polygon *currentPiece,
-    const Polygon *closestPiece,
-    double p)
-{
-    // let's write a 3d model to help visualize the state of things...
-    SolidColorSurface gray({100, 100, 100});  // completed sections
-    SolidColorSurface blue({50, 50, 150});    // head of current section
-    SolidColorSurface white({255, 255, 255}); // current section, middle pieces
-    SolidColorSurface green({50, 150, 50});   // current polygon
-    SolidColorSurface red({150, 50, 50});     // unplaced polygons
-    SolidColorSurface purple({128, 0, 128});  // closest piece
-
-    vector<const Polygon *> vector_unplaced_poly;
-    for (auto &up : unplacedPolygons)
-    {
-        if (up != closestPiece && dist(center(up), center(currentPiece)) < 1.0)
-            vector_unplaced_poly.push_back(up);
-    }
-    vector<pair<SolidColorSurface, vector<const Polygon *>>> debug_surfaces;
-    //debug_surfaces.push_back({gray, debug_completed_surfaces});
-    debug_surfaces.push_back({blue, {firstPiece}});
-    debug_surfaces.push_back({white, {++placed.begin(), placed.end()}});
-    debug_surfaces.push_back({green, {currentPiece}});
-    debug_surfaces.push_back({red, vector_unplaced_poly});
-    if (closestPiece)
-        debug_surfaces.push_back({purple, {closestPiece}});
-
-    cout << "Writing 3D model debug.obj to visualize polygons." << endl;
-    ModelWriter_Wavefront model_writer(args.output_directory, filename);
-    model_writer.write(source.points, debug_surfaces);
-
-    // add rectangle that shows the plane we're trying to intersect.
-    ModelBuilder::Statistics stats;
-    for (auto &pair : debug_surfaces)
-    {
-        for (auto &poly : pair.second)
-        {
-            stats.addPoints(poly->vertices);
-        }
-    }
-    vector<Point> plane_points = {
-        {p, stats.min.y, stats.min.z},
-        {p, stats.min.y, stats.max.z},
-        {p, stats.max.y, stats.max.z},
-        {p, stats.max.y, stats.min.z}};
-    Polygon plane;
-    plane.vertices.push_back(&plane_points[0]);
-    plane.vertices.push_back(&plane_points[1]);
-    plane.vertices.push_back(&plane_points[2]);
-    plane.vertices.push_back(&plane_points[3]);
-    vector<pair<SolidColorSurface, vector<const Polygon *>>> debug_plane;
-    debug_plane.push_back({gray, {&plane}});
-    model_writer.write(plane_points, debug_plane);
 }
 
 void ModelGenerator::generate(const ModelBuilder &source)

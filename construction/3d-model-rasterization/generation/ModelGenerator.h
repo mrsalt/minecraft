@@ -1,35 +1,15 @@
 #pragma once
+#include "LineSegment.h"
 #include "ModelBuilder.h"
+#include "Polygon.h"
 
 #include <algorithm>
 #include <iostream>
 #include <set>
 #include <vector>
 
-struct PolygonBounds
-{
-    PolygonBounds(const Polygon *polygon);
-    std::string toString(const ModelBuilder &source) const;
-
-    const Polygon *polygon;
-    Point min;
-    Point max;
-};
-
-typedef bool (*PointComparisonMethod)(const Point &a, const Point &b);
 typedef bool (*PolygonComparisonMethod)(const PolygonBounds &a, const PolygonBounds &b);
 typedef bool (*PolygonPlaneComparisonMethod)(const PolygonBounds &a, double p);
-
-struct LineSegment : std::pair<Point *, Point *>
-{
-    LineSegment();
-    LineSegment(Point *a, Point *b);
-    operator bool() const;
-    static LineSegment create(Point *a, Point *b, PointComparisonMethod lessThan);
-    void print(std::ostream &out, const Point *first, bool printCoordinates = false) const;
-
-    SurfaceInfo *surfaceInfo{nullptr};
-};
 
 class ModelGenerator
 {
