@@ -20,12 +20,12 @@ typedef bool (*PointComparisonMethod)(const Point &a, const Point &b);
 typedef bool (*PolygonComparisonMethod)(const PolygonBounds &a, const PolygonBounds &b);
 typedef bool (*PolygonPlaneComparisonMethod)(const PolygonBounds &a, double p);
 
-struct SpanningPair : std::pair<Point *, Point *>
+struct LineSegment : std::pair<Point *, Point *>
 {
-    SpanningPair();
-    SpanningPair(Point *a, Point *b);
+    LineSegment();
+    LineSegment(Point *a, Point *b);
     operator bool() const;
-    static SpanningPair create(Point *a, Point *b, PointComparisonMethod lessThan);
+    static LineSegment create(Point *a, Point *b, PointComparisonMethod lessThan);
     void print(std::ostream &out, const Point *first, bool printCoordinates = false) const;
 
     SurfaceInfo *surfaceInfo{nullptr};
@@ -51,7 +51,7 @@ private:
         PolygonComparisonMethod polyOrderingMethod,
         PointComparisonMethod pointOrderingMethod);
     template <typename TMember>
-    std::set<std::vector<SpanningPair>> placePolygonsInLayer(
+    std::set<std::vector<LineSegment>> placePolygonsInLayer(
         std::set<const Polygon *> &unplacedPolygons,
         const double layerPosition,
         const ModelBuilder &source,

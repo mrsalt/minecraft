@@ -56,37 +56,37 @@ void write_debug_model(
     const Polygon *currentPiece,
     double p);
 
-SpanningPair::SpanningPair()
+LineSegment::LineSegment()
     : pair<Point *, Point *>{nullptr, nullptr}
 {
 }
 
-SpanningPair::SpanningPair(Point *a, Point *b)
+LineSegment::LineSegment(Point *a, Point *b)
     : pair<Point *, Point *>{a, b}
 {
 }
 
-SpanningPair::operator bool() const
+LineSegment::operator bool() const
 {
     return first != nullptr && second != nullptr;
 }
 
-SpanningPair SpanningPair::create(Point *a, Point *b, PointComparisonMethod lessThan)
+LineSegment LineSegment::create(Point *a, Point *b, PointComparisonMethod lessThan)
 {
     if (lessThan(*a, *b))
-        return SpanningPair(a, b);
+        return LineSegment(a, b);
     else
-        return SpanningPair(b, a);
+        return LineSegment(b, a);
 }
 
-void SpanningPair::print(ostream &out, const Point *first, bool printCoordinates) const
+void LineSegment::print(ostream &out, const Point *first, bool printCoordinates) const
 {
     out << "#" << (this->first - first) + 1 << " - #" << (this->second - first) + 1;
     if (printCoordinates)
         out << " " << *this->first << ", " << *this->second;
 }
 
-void print(ostream &out, const vector<SpanningPair> &list, const ModelBuilder &source)
+void print(ostream &out, const vector<LineSegment> &list, const ModelBuilder &source)
 {
     out << "list @" << &list << endl;
     for (auto &sp : list)
@@ -97,7 +97,7 @@ void print(ostream &out, const vector<SpanningPair> &list, const ModelBuilder &s
     }
 }
 
-pair<bool, SpanningPair> areAdjacent(const Polygon &first, const Polygon &second, PointComparisonMethod aPrecedesB)
+pair<bool, LineSegment> areAdjacent(const Polygon &first, const Polygon &second, PointComparisonMethod aPrecedesB)
 {
     Point *common_vertices[2];
     size_t count_common = 0;
@@ -114,11 +114,11 @@ pair<bool, SpanningPair> areAdjacent(const Polygon &first, const Polygon &second
     }
     if (count_common == 2)
     {
-        return {true, SpanningPair::create(common_vertices[0], common_vertices[1], aPrecedesB)};
+        return {true, LineSegment::create(common_vertices[0], common_vertices[1], aPrecedesB)};
     }
     else
     {
-        return {false, SpanningPair()};
+        return {false, LineSegment()};
     }
 }
 
@@ -182,7 +182,7 @@ void ModelGenerator::slicePolygonsAlongAxis(
             set<const Polygon *> unplacedPolygons;
             for (const auto &poly : activePolygons)
                 unplacedPolygons.insert(poly->polygon);
-            set<vector<SpanningPair>> shapes = placePolygonsInLayer(unplacedPolygons, p, source, member, pointOrderingMethod);
+            set<vector<LineSegment>> shapes = placePolygonsInLayer(unplacedPolygons, p, source, member, pointOrderingMethod);
             cout << "    " << shapes.size() << " separate shapes identified (cross section areas)." << endl;
             for (auto &list : shapes)
             {
@@ -214,7 +214,7 @@ void ModelGenerator::slicePolygonsAlongAxis(
 }
 
 template <typename TMember>
-set<vector<SpanningPair>> ModelGenerator::placePolygonsInLayer(set<const Polygon *> &unplacedPolygons, const double layerPosition, const ModelBuilder &source, TMember member, PointComparisonMethod pointOrderingMethod)
+set<vector<LineSegment>> ModelGenerator::placePolygonsInLayer(set<const Polygon *> &unplacedPolygons, const double layerPosition, const ModelBuilder &source, TMember member, PointComparisonMethod pointOrderingMethod)
 {
     // PUZZLE ALGORITHM
     // Create a set of unplaced polygons, which is a copy of active polygons.
@@ -226,7 +226,7 @@ set<vector<SpanningPair>> ModelGenerator::placePolygonsInLayer(set<const Polygon
     //    'current' polygon.
     //    (Bordering polygons share adjacent vertices).
     // 3. When an adjacent polygon is found, take the vertices that are shared, create
-    //    a SpanningPair, and add that SpanningPair to a vector representing the current
+    //    a LineSegment, and add that LineSegment to a vector representing the current
     //    set of adjacent polygons.  Remove that adjacent polygon from the set of
     //    unplaced polygons.  Consider the adjacent polygon as the 'current' polygon
     //    and go back to step 2.
@@ -235,7 +235,7 @@ set<vector<SpanningPair>> ModelGenerator::placePolygonsInLayer(set<const Polygon
     //    the vector.  Add this vector to the set of shapes for this layer and go back
     //    to step 1.
 
-    set<vector<SpanningPair>> shapes;
+    set<vector<LineSegment>> shapes;
     vector<const Polygon *> debug_completed_surfaces;
 
     while (unplacedPolygons.size())
@@ -244,7 +244,7 @@ set<vector<SpanningPair>> ModelGenerator::placePolygonsInLayer(set<const Polygon
         auto it = unplacedPolygons.begin();
         const Polygon *firstPiece = *it;
         unplacedPolygons.erase(it);
-        vector<SpanningPair> orderedPairs;
+        vector<LineSegment> orderedPairs;
         vector<const Polygon *> placed;
         placed.push_back(firstPiece);
 
@@ -256,7 +256,7 @@ set<vector<SpanningPair>> ModelGenerator::placePolygonsInLayer(set<const Polygon
             while (!firstMatched)
             {
                 //cout << format("Trying to match %s", currentPiece->toString(source).c_str()) << endl;
-                SpanningPair common_edge;
+                LineSegment common_edge;
                 for (const Polygon *adjacentPolygon : source.getPolygonsAdjacentTo(currentPiece))
                 {
                     auto it = unplacedPolygons.find(adjacentPolygon);
