@@ -131,6 +131,11 @@ Point projectLineOntoPlane(const Point &pMin, const Point &pMax, double planeVal
     return pMin + pVec * t;
 }
 
+ModelGenerator::ModelGenerator(const ModelBuilder &source, double model_height)
+    : modelHeight{model_height}
+{
+}
+
 template <typename TMember>
 void ModelGenerator::slicePolygonsAlongAxis(
     vector<PolygonBounds> &polyBounds,
@@ -192,15 +197,16 @@ void ModelGenerator::slicePolygonsAlongAxis(
                 {
                     Point pPlane = projectLineOntoPlane(*line.first, *line.second, p, member);
                     assert(abs(pPlane.*member - p) < 0.000001);
-                    double x = pPlane.*_2D_xaxis;
-                    double y = pPlane.*_3D_yaxis;
-                    //line.surfaceInfo;
 
                     if (args.output_cross_model)
                     {
                         cross_model_points.push_back((int)cross_model.points.size());
                         cross_model.verticeRead(pPlane);
                     }
+
+                    double x = pPlane.*_2D_xaxis;
+                    double y = pPlane.*_3D_yaxis;
+                    //line.surfaceInfo;
                 }
 
                 if (args.output_cross_model)

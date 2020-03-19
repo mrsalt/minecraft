@@ -34,7 +34,7 @@ struct LineSegment : std::pair<Point *, Point *>
 class ModelGenerator
 {
 public:
-    void setVerticalScale(double height) { this->modelHeight = height; }
+    ModelGenerator(const ModelBuilder & source, double height);
     void generate(const ModelBuilder &source);
 
 private:

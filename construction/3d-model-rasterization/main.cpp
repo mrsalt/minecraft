@@ -69,8 +69,7 @@ int generateModel(const Arguments & args, const ModelBuilder & builder)
     {
         cout << stats;
     }
-    ModelGenerator generator;
-    generator.setVerticalScale(args.model_height_meters);
+    ModelGenerator generator(builder, args.model_height_meters);
     generator.generate(builder);
     return 0;
 }
