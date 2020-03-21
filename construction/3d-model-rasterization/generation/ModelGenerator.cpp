@@ -69,7 +69,7 @@ void ModelGenerator::slicePolygonsAlongAxis(
     const ModelBuilder::Statistics &stats,
     TMember member,
     TMember _2D_xaxis,
-    TMember _3D_yaxis,
+    TMember _2D_yaxis,
     PolygonComparisonMethod polyOrderingMethod,
     PointComparisonMethod pointOrderingMethod)
 {
@@ -108,14 +108,17 @@ void ModelGenerator::slicePolygonsAlongAxis(
         cout << "  at layer #" << l << " (position: " << p << ") there are " << activePolygons.size() << " polygons to place." << endl;
         if (activePolygons.size())
         {
-            set<const Polygon *> unplacedPolygons;
-            for (const auto &poly : activePolygons)
-                unplacedPolygons.insert(poly->polygon);
-            set<vector<LineSegment>> shapes = placePolygonsInLayer(unplacedPolygons, p, source, member, pointOrderingMethod);
-            cout << "    " << shapes.size() << " separate shapes identified (cross section areas)." << endl;
-            for (auto &list : shapes)
+            vector<vector<LineSegment>> shapes_by_lines = placePolygonsInLayer(unplacedPolygons, p, source, member, pointOrderingMethod);
+            cout << "    " << shapes_by_lines.size() << " separate shapes identified (cross section areas)." << endl;
+            vector<vector<LineSegment2D>> shapes_2D;
+            for (auto &list : shapes_by_lines)
             {
+                vector<LineSegment2D> points_in_shape;
                 vector<int> cross_model_points;
+                bool firstPoint = true;
+                Point2D previousPoint;
+                SurfaceInfo * previousSurface;
+
                 //print(cout, list, source);
                 for (const auto &line : list)
                 {
@@ -128,10 +131,22 @@ void ModelGenerator::slicePolygonsAlongAxis(
                         cross_model.verticeRead(pPlane);
                     }
 
-                    double x = pPlane.*_2D_xaxis;
-                    double y = pPlane.*_3D_yaxis;
-                    //line.surfaceInfo;
+                    Point2D point{pPlane.*_2D_xaxis, pPlane.*_2D_yaxis};
+                    if (firstPoint)
+                    {
+                        previousPoint = point;
+                        previousSurface = line.surfaceInfo;
+                        firstPoint = false;
+                    }
+                    else
+                    {
+                        LineSegment2D segment(previousPoint, point, previousSurface);
+                        points_in_shape.push_back(segment);
+                        previousPoint = point;
+                        previousSurface = line.surfaceInfo;
+                    }
                 }
+                shapes_2D.push_back(points_in_shape);
 
                 if (args.output_cross_model)
                 {
@@ -139,12 +154,15 @@ void ModelGenerator::slicePolygonsAlongAxis(
                     cross_model.polygonRead(cross_model_points.data(), (int)cross_model_points.size());
                 }
             }
+            //vector<vector<LineSegment2D>> shapes_2D;
+            Point2D sliceOrigin{stats.min.*_2D_xaxis, stats.min.pPlane.*_2D_yaxis};
+            //stats.
         }
     }
 }
 
 template <typename TMember>
-set<vector<LineSegment>> ModelGenerator::placePolygonsInLayer(set<const Polygon *> &unplacedPolygons, const double layerPosition, const ModelBuilder &source, TMember member, PointComparisonMethod pointOrderingMethod)
+vector<vector<LineSegment>> ModelGenerator::placePolygonsInLayer(const set<const PolygonBounds *> &toPlace, const double layerPosition, const ModelBuilder &source, TMember member, PointComparisonMethod pointOrderingMethod)
 {
     // PUZZLE ALGORITHM
     // Create a set of unplaced polygons, which is a copy of active polygons.
@@ -164,8 +182,11 @@ set<vector<LineSegment>> ModelGenerator::placePolygonsInLayer(set<const Polygon 
     //    borders the 'first' polygon.  Add those shared vertices (spanning pair) to
     //    the vector.  Add this vector to the set of shapes for this layer and go back
     //    to step 1.
+    set<const Polygon *> unplacedPolygons;
+    for (const auto &poly : toPlace)
+        unplacedPolygons.insert(poly->polygon);
 
-    set<vector<LineSegment>> shapes;
+    vector<vector<LineSegment>> shapes;
     vector<const Polygon *> debug_completed_surfaces;
 
     while (unplacedPolygons.size())
@@ -234,7 +255,7 @@ set<vector<LineSegment>> ModelGenerator::placePolygonsInLayer(set<const Polygon 
             std::cerr << e.what() << '\n';
             throw e;
         }
-        shapes.insert(orderedPairs);
+        shapes.push_back(orderedPairs);
         debug_completed_surfaces.insert(debug_completed_surfaces.end(), placed.begin(), placed.end());
     }
     return shapes;

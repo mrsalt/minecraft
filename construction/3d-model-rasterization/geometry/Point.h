@@ -15,4 +15,10 @@ struct Point
     friend std::ostream &operator<<(std::ostream &out, const Point &);
 };
 
+struct Point2D
+{
+    double x;
+    double y;
+};
+
 typedef bool (*PointComparisonMethod)(const Point &a, const Point &b);

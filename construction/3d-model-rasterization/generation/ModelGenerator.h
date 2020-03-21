@@ -27,12 +27,12 @@ private:
         const ModelBuilder::Statistics &stats,
         TMember member,
         TMember _2D_xaxis,
-        TMember _3D_yaxis,
+        TMember _2D_yaxis,
         PolygonComparisonMethod polyOrderingMethod,
         PointComparisonMethod pointOrderingMethod);
     template <typename TMember>
-    std::set<std::vector<LineSegment>> placePolygonsInLayer(
-        std::set<const Polygon *> &unplacedPolygons,
+    std::vector<std::vector<LineSegment>> placePolygonsInLayer(
+        const std::set<const PolygonBounds *> &polygonsToPlace,
         const double layerPosition,
         const ModelBuilder &source,
         TMember member,
