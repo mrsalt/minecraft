@@ -12,12 +12,17 @@ Arguments local_args;
 const Arguments & args = local_args;
 
 bool parseModel(const Arguments & args, ModelBuilder &);
-int generateModel(const Arguments & args, const ModelBuilder &);
 
 int main(int argc, char **argv)
 {
     if (!local_args.parse(argc, argv))
     {
+        return -1;
+    }
+
+    if (args.model_height_meters < 1.0)
+    {
+        cout << "Model height must be >= 1.0" << endl;
         return -1;
     }
 
@@ -27,8 +32,16 @@ int main(int argc, char **argv)
         cout << "Unable to parse model file: " << args.model_file << endl;
         return -1;
     }
-
-    return generateModel(args, builder);
+    try
+    {
+        ModelGenerator generator(builder, args.model_height_meters);
+        generator.generate();
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+    }
+    return 0;
 }
 
 bool parseModel(const Arguments & args, ModelBuilder & builder)
@@ -55,21 +68,4 @@ bool parseModel(const Arguments & args, ModelBuilder & builder)
         }
     }
     return false;
-}
-
-int generateModel(const Arguments & args, const ModelBuilder & builder)
-{
-    ModelBuilder::Statistics stats = builder.getStatistics();
-    if (stats.count_vertices == 0 || stats.count_polygons == 0)
-    {
-        cout << "Error.  Invalid model loaded:" << stats << endl;
-        return -1;
-    }
-    if (args.show_stats)
-    {
-        cout << stats;
-    }
-    ModelGenerator generator(builder, args.model_height_meters);
-    generator.generate(builder);
-    return 0;
 }

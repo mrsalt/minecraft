@@ -6,25 +6,32 @@
 #include <algorithm>
 #include <iostream>
 #include <set>
+#include <stdexcept>
 #include <vector>
 
 typedef bool (*PolygonComparisonMethod)(const PolygonBounds &a, const PolygonBounds &b);
 typedef bool (*PolygonPlaneComparisonMethod)(const PolygonBounds &a, double p);
 
+class model_error : public std::runtime_error
+{
+public:
+    model_error(const std::string &message)
+        : runtime_error(message)
+    {
+    }
+};
+
 class ModelGenerator
 {
 public:
     ModelGenerator(const ModelBuilder & source, double height);
-    void generate(const ModelBuilder &source);
+    void generate(); // throws a model_error if there are problems.
 
 private:
     template <typename TMember>
     void slicePolygonsAlongAxis(
         std::vector<PolygonBounds> &polyBounds,
-        const double layerDist,
         const int layerCount,
-        const ModelBuilder &source,
-        const ModelBuilder::Statistics &stats,
         TMember member,
         TMember _2D_xaxis,
         TMember _2D_yaxis,
@@ -34,12 +41,14 @@ private:
     std::vector<std::vector<LineSegment>> placePolygonsInLayer(
         const std::set<const PolygonBounds *> &polygonsToPlace,
         const double layerPosition,
-        const ModelBuilder &source,
         TMember member,
         PointComparisonMethod pointOrderingMethod);
 
 private:
-    double modelHeight{0.0};
+    const ModelBuilder &source;
+    const ModelBuilder::Statistics stats;
+    const double layerDist;
 
     ModelBuilder cross_model;
+
 };

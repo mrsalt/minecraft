@@ -6,20 +6,10 @@
 
 #include <assert.h>
 #include <map>
-#include <stdexcept>
 
 using namespace std;
 
 extern const Arguments &args;
-
-class model_error : public runtime_error
-{
-public:
-    model_error(const string &message)
-        : runtime_error(message)
-    {
-    }
-};
 
 pair<bool, LineSegment> areAdjacent(const Polygon &first, const Polygon &second, PointComparisonMethod aPrecedesB)
 {
@@ -56,17 +46,14 @@ Point projectLineOntoPlane(const Point &pMin, const Point &pMax, double planeVal
 }
 
 ModelGenerator::ModelGenerator(const ModelBuilder &source, double model_height)
-    : modelHeight{model_height}
+    : source{source}, stats{source.getStatistics()}, layerDist{stats.extent.height / model_height}
 {
 }
 
 template <typename TMember>
 void ModelGenerator::slicePolygonsAlongAxis(
     vector<PolygonBounds> &polyBounds,
-    const double layerDist,
     const int layerCount,
-    const ModelBuilder &source,
-    const ModelBuilder::Statistics &stats,
     TMember member,
     TMember _2D_xaxis,
     TMember _2D_yaxis,
@@ -78,18 +65,18 @@ void ModelGenerator::slicePolygonsAlongAxis(
     cout << "For axis " << (member == &Point::x ? "x" : member == &Point::y ? "y" : member == &Point::z ? "z" : "?")
          << " there are " << layerCount << " layers to generate." << endl;
 
-    set<PolygonBounds *> activePolygons;
+    set<const PolygonBounds *> activePolygons;
     int nextPoly = 0;
     for (int l = 0; l <= layerCount; l++)
     {
         double p = stats.min.*member + l * layerDist;
 
         // look at activePolygons and see which ones are no longer intersecting the plane:
-        vector<PolygonBounds *> toRemove;
-        for (PolygonBounds *poly : activePolygons)
+        vector<const PolygonBounds *> toRemove;
+        for (const PolygonBounds *poly : activePolygons)
             if (poly->max.*member < p)
                 toRemove.push_back(poly);
-        for (PolygonBounds *poly : toRemove)
+        for (const PolygonBounds *poly : toRemove)
             activePolygons.erase(poly);
 
         // see which polys are now intersecting the plane and should be added to activePolygons:
@@ -108,7 +95,7 @@ void ModelGenerator::slicePolygonsAlongAxis(
         cout << "  at layer #" << l << " (position: " << p << ") there are " << activePolygons.size() << " polygons to place." << endl;
         if (activePolygons.size())
         {
-            vector<vector<LineSegment>> shapes_by_lines = placePolygonsInLayer(unplacedPolygons, p, source, member, pointOrderingMethod);
+            vector<vector<LineSegment>> shapes_by_lines = placePolygonsInLayer(activePolygons, p, member, pointOrderingMethod);
             cout << "    " << shapes_by_lines.size() << " separate shapes identified (cross section areas)." << endl;
             vector<vector<LineSegment2D>> shapes_2D;
             for (auto &list : shapes_by_lines)
@@ -117,7 +104,7 @@ void ModelGenerator::slicePolygonsAlongAxis(
                 vector<int> cross_model_points;
                 bool firstPoint = true;
                 Point2D previousPoint;
-                SurfaceInfo * previousSurface;
+                SurfaceInfo *previousSurface;
 
                 //print(cout, list, source);
                 for (const auto &line : list)
@@ -155,14 +142,18 @@ void ModelGenerator::slicePolygonsAlongAxis(
                 }
             }
             //vector<vector<LineSegment2D>> shapes_2D;
-            Point2D sliceOrigin{stats.min.*_2D_xaxis, stats.min.pPlane.*_2D_yaxis};
+            Point2D sliceOrigin{stats.min.*_2D_xaxis, stats.min.*_2D_yaxis};
             //stats.
         }
     }
 }
 
 template <typename TMember>
-vector<vector<LineSegment>> ModelGenerator::placePolygonsInLayer(const set<const PolygonBounds *> &toPlace, const double layerPosition, const ModelBuilder &source, TMember member, PointComparisonMethod pointOrderingMethod)
+vector<vector<LineSegment>> ModelGenerator::placePolygonsInLayer(
+    const set<const PolygonBounds *> &toPlace,
+    const double layerPosition,
+    TMember member,
+    PointComparisonMethod pointOrderingMethod)
 {
     // PUZZLE ALGORITHM
     // Create a set of unplaced polygons, which is a copy of active polygons.
@@ -261,13 +252,16 @@ vector<vector<LineSegment>> ModelGenerator::placePolygonsInLayer(const set<const
     return shapes;
 }
 
-void ModelGenerator::generate(const ModelBuilder &source)
+void ModelGenerator::generate()
 {
-    if (modelHeight < 1.0)
-        throw invalid_argument("Model height must be >= 1.0");
-
-    ModelBuilder::Statistics stats = source.getStatistics();
-    const double layerDist = stats.extent.height / modelHeight;
+    if (stats.count_vertices == 0 || stats.count_polygons == 0)
+    {
+        throw model_error(format("Error: invalid model.  vertices and polygons must be > 0.  (vertice count: %u, polygon count: %u)", stats.count_vertices, stats.count_polygons));
+    }
+    if (args.show_stats)
+    {
+        cout << stats;
+    }
 
     vector<PolygonBounds> polyBounds;
     for (const auto &polygon : source.polygons)
@@ -283,7 +277,7 @@ void ModelGenerator::generate(const ModelBuilder &source)
         cross_model.setCurrentColor({255, 100, 100});
     }
     slicePolygonsAlongAxis(
-        polyBounds, layerDist, (int)(stats.extent.width / layerDist), source, stats,
+        polyBounds, (int)(stats.extent.width / layerDist),
         &Point::x,
         &Point::z,
         &Point::y,
@@ -296,7 +290,7 @@ void ModelGenerator::generate(const ModelBuilder &source)
     if (args.output_cross_model)
         cross_model.setCurrentColor({100, 255, 100});
     slicePolygonsAlongAxis(
-        polyBounds, layerDist, (int)(stats.extent.height / layerDist), source, stats,
+        polyBounds, (int)(stats.extent.height / layerDist),
         &Point::y,
         &Point::x,
         &Point::z,
@@ -309,7 +303,7 @@ void ModelGenerator::generate(const ModelBuilder &source)
     if (args.output_cross_model)
         cross_model.setCurrentColor({100, 100, 255});
     slicePolygonsAlongAxis(
-        polyBounds, layerDist, (int)(stats.extent.depth / layerDist), source, stats,
+        polyBounds, (int)(stats.extent.depth / layerDist),
         &Point::z,
         &Point::x,
         &Point::y,
