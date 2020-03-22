@@ -19,6 +19,8 @@ struct Point2D
 {
     double x;
     double y;
+    std::string toString() const;
+    friend std::ostream &operator<<(std::ostream &out, const Point2D &);
 };
 
 typedef bool (*PointComparisonMethod)(const Point &a, const Point &b);

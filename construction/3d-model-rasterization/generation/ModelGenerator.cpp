@@ -137,13 +137,24 @@ void ModelGenerator::slicePolygonsAlongAxis(
 
                 if (args.output_cross_model)
                 {
-                    // TODO: break this bad boy up into many smaller polygons
                     cross_model.polygonRead(cross_model_points.data(), (int)cross_model_points.size());
                 }
             }
-            //vector<vector<LineSegment2D>> shapes_2D;
-            Point2D sliceOrigin{stats.min.*_2D_xaxis, stats.min.*_2D_yaxis};
-            //stats.
+            size_t slices;
+            slices = (size_t)round((stats.max.*_2D_yaxis - stats.min.*_2D_yaxis) / layerDist) + 1;
+            for (size_t n = 0; n < slices; n++)
+            {
+                Point2D p1{stats.min.*_2D_xaxis, stats.min.*_2D_yaxis + n * layerDist};
+                Point2D p2{stats.max.*_2D_xaxis, stats.min.*_2D_yaxis + n * layerDist};
+                slicePolygons({p1, p2}, shapes_2D);
+            }
+            slices = (size_t)round((stats.max.*_2D_xaxis - stats.min.*_2D_xaxis) / layerDist) + 1;
+            for (size_t n = 0; n < slices; n++)
+            {
+                Point2D p1{stats.min.*_2D_xaxis + n * layerDist, stats.min.*_2D_yaxis};
+                Point2D p2{stats.min.*_2D_xaxis + n * layerDist, stats.max.*_2D_yaxis};
+                slicePolygons({p1, p2}, shapes_2D);
+            }
         }
     }
 }
@@ -250,6 +261,23 @@ vector<vector<LineSegment>> ModelGenerator::placePolygonsInLayer(
         debug_completed_surfaces.insert(debug_completed_surfaces.end(), placed.begin(), placed.end());
     }
     return shapes;
+}
+
+void ModelGenerator::slicePolygons(const LineSegment2D &slice, vector<vector<LineSegment2D>> &polygons)
+{
+    cout << "slicing polygons along line " << slice << endl;
+    vector<pair<LineSegment2D *, Point2D>> intersecting;
+    for (auto &shape : polygons)
+    {
+        for (auto &segment : shape)
+        {
+            Point2D intersection;
+            if (segment.intersects(slice, intersection))
+                intersecting.push_back({&segment, intersection});
+        }
+    }
+    if (intersecting.empty())
+        return; // nothing to do
 }
 
 void ModelGenerator::generate()

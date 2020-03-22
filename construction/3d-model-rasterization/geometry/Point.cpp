@@ -18,7 +18,7 @@ Point Point::operator*(double scalar) const
     return {x * scalar, y * scalar, z * scalar};
 }
 
-Point & Point::operator+=(const Point &rhs)
+Point &Point::operator+=(const Point &rhs)
 {
     x += rhs.x;
     y += rhs.y;
@@ -32,6 +32,17 @@ string Point::toString() const
 }
 
 ostream &operator<<(ostream &out, const Point &p)
+{
+    out << p.toString();
+    return out;
+}
+
+string Point2D::toString() const
+{
+    return format("(x: %.3f, y: %.3f)", x, y);
+}
+
+ostream &operator<<(std::ostream &out, const Point2D &p)
 {
     out << p.toString();
     return out;

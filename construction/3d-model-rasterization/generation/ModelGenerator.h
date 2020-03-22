@@ -24,7 +24,7 @@ public:
 class ModelGenerator
 {
 public:
-    ModelGenerator(const ModelBuilder & source, double height);
+    ModelGenerator(const ModelBuilder &source, double height);
     void generate(); // throws a model_error if there are problems.
 
 private:
@@ -43,6 +43,7 @@ private:
         const double layerPosition,
         TMember member,
         PointComparisonMethod pointOrderingMethod);
+    void slicePolygons(const LineSegment2D &slice, std::vector<std::vector<LineSegment2D>> &polygons);
 
 private:
     const ModelBuilder &source;
@@ -50,5 +51,4 @@ private:
     const double layerDist;
 
     ModelBuilder cross_model;
-
 };

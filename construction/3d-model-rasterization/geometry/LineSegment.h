@@ -21,17 +21,20 @@ struct LineSegment : std::pair<Point *, Point *>
 
 struct LineSegment2D
 {
-    LineSegment2D(const Point2D & first, const Point2D & second, SurfaceInfo * surface)
-    : first{first}
-    , second{second}
-    , bounds(first, second)
-    , surface{surface}
-    {}
+    LineSegment2D(const Point2D &first, const Point2D &second, SurfaceInfo *surface = nullptr)
+        : first{first}, second{second}, bounds(first, second), surface{surface}
+    {
+    }
 
     Point2D first;
     Point2D second;
     Rectangle bounds;
-    SurfaceInfo *surface{nullptr};
+    SurfaceInfo *surface;
+
+    bool intersects(const LineSegment2D &segment, Point2D &intersection) const;
+
+    std::string toString() const;
+    friend std::ostream &operator<<(std::ostream &out, const LineSegment2D &);
 };
 
 void print(std::ostream &out, const std::vector<LineSegment> &list, const ModelBuilder &source);
