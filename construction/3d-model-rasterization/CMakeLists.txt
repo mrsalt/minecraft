@@ -6,6 +6,7 @@ include_directories(
     geometry
     model-readers
     model-writers
+    utils
 )
 
 add_executable(rasterize-3d
@@ -21,6 +22,8 @@ add_executable(rasterize-3d
     model-readers/ModelReader_Wavefront.cpp
     model-writers/ModelWriter_Wavefront.cpp
 )
+
+add_subdirectory(test)
 
 #set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 #set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
