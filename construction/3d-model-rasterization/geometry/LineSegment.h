@@ -33,6 +33,20 @@ struct LineSegment2D
 
     bool intersects(const LineSegment2D &segment, Point2D &intersection) const;
 
+    bool operator<(const LineSegment2D &rhs) const
+    {
+        if (first < rhs.first)
+            return true;
+        if (second < rhs.second)
+            return true;
+        return false;
+    }
+
+    bool operator==(const LineSegment2D &rhs) const
+    {
+        return first == rhs.first && second == rhs.second;
+    }
+
     std::string toString() const;
     friend std::ostream &operator<<(std::ostream &out, const LineSegment2D &);
 };

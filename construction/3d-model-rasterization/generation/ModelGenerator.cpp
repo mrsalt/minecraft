@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <map>
+#include <set>
 
 using namespace std;
 
@@ -267,17 +268,22 @@ void ModelGenerator::slicePolygons(const LineSegment2D &slice, vector<vector<Lin
 {
     cout << "slicing polygons along line " << slice << endl;
     vector<pair<LineSegment2D *, Point2D>> intersecting;
+    set<LineSegment2D *> set_intersecting;
     for (auto &shape : polygons)
     {
         for (auto &segment : shape)
         {
             Point2D intersection;
             if (segment.intersects(slice, intersection))
+            {
                 intersecting.push_back({&segment, intersection});
+                set_intersecting.insert(&segment);
+            }
         }
     }
     if (intersecting.empty())
         return; // nothing to do
+    // intersecting needs to be sorted along the direction of the slice.
 }
 
 void ModelGenerator::generate()

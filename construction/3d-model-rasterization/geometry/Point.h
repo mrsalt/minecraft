@@ -21,6 +21,24 @@ struct Point2D
     double y;
     std::string toString() const;
     friend std::ostream &operator<<(std::ostream &out, const Point2D &);
+
+    bool operator<(const Point2D &rhs) const
+    {
+        if (x < rhs.x)
+            return true;
+        if (x > rhs.x)
+            return false;
+        if (y < rhs.y)
+            return true;
+        if (y > rhs.y)
+            return false;
+        return true;
+    }
+
+    bool operator==(const Point2D &rhs) const
+    {
+        return x == rhs.x && y == rhs.y;
+    }
 };
 
 typedef bool (*PointComparisonMethod)(const Point &a, const Point &b);
