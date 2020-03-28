@@ -6,11 +6,11 @@ include_directories(
     geometry
     model-readers
     model-writers
+    segmentation
     utils
 )
 
-add_executable(rasterize-3d
-    main.cpp
+add_library(rasterize-lib
     ModelBuilder.cpp
     generation/debug.cpp
     generation/ModelGenerator.cpp
@@ -21,7 +21,14 @@ add_executable(rasterize-3d
     geometry/Size.cpp
     model-readers/ModelReader_Wavefront.cpp
     model-writers/ModelWriter_Wavefront.cpp
+    segmentation/PolygonSegmentation.cpp
 )
+
+add_executable(rasterize-3d
+    main.cpp
+)
+
+target_link_libraries(rasterize-3d rasterize-lib)
 
 add_subdirectory(test)
 

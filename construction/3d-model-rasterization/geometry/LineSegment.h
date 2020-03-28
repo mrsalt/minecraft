@@ -47,6 +47,11 @@ struct LineSegment2D
         return first == rhs.first && second == rhs.second;
     }
 
+    LineSegment2D operator!() const
+    {
+        return {second, first, surface};
+    }
+
     std::string toString() const;
     friend std::ostream &operator<<(std::ostream &out, const LineSegment2D &);
 };

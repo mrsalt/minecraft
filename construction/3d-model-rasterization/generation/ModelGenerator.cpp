@@ -1,7 +1,8 @@
+#include "Arguments.h"
 #include "debug.h"
 #include "ModelGenerator.h"
 #include "ModelWriter_Wavefront.h"
-#include "Arguments.h"
+#include "PolygonSegmentation.h"
 #include "string_format.h"
 
 #include <assert.h>
@@ -262,28 +263,6 @@ vector<vector<LineSegment>> ModelGenerator::placePolygonsInLayer(
         debug_completed_surfaces.insert(debug_completed_surfaces.end(), placed.begin(), placed.end());
     }
     return shapes;
-}
-
-void ModelGenerator::slicePolygons(const LineSegment2D &slice, vector<vector<LineSegment2D>> &polygons)
-{
-    cout << "slicing polygons along line " << slice << endl;
-    vector<pair<LineSegment2D *, Point2D>> intersecting;
-    set<LineSegment2D *> set_intersecting;
-    for (auto &shape : polygons)
-    {
-        for (auto &segment : shape)
-        {
-            Point2D intersection;
-            if (segment.intersects(slice, intersection))
-            {
-                intersecting.push_back({&segment, intersection});
-                set_intersecting.insert(&segment);
-            }
-        }
-    }
-    if (intersecting.empty())
-        return; // nothing to do
-    // intersecting needs to be sorted along the direction of the slice.
 }
 
 void ModelGenerator::generate()

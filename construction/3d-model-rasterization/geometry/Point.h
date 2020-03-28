@@ -22,6 +22,14 @@ struct Point2D
     std::string toString() const;
     friend std::ostream &operator<<(std::ostream &out, const Point2D &);
 
+    // not the same as actual distance because no square root is done
+    double relativeDistance(const Point2D &other) const
+    {
+        double xDelta = other.x - x;
+        double yDelta = other.y - y;
+        return xDelta * xDelta + yDelta * yDelta;
+    }
+
     bool operator<(const Point2D &rhs) const
     {
         if (x < rhs.x)
@@ -38,6 +46,11 @@ struct Point2D
     bool operator==(const Point2D &rhs) const
     {
         return x == rhs.x && y == rhs.y;
+    }
+
+    bool operator!=(const Point2D &rhs) const
+    {
+        return x != rhs.x || y != rhs.y;
     }
 };
 

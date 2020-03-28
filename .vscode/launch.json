@@ -8,12 +8,27 @@
             "name": "Rasterize 3d (Windows)",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/construction/3d-model-rasterization/rasterize-3d.exe",
+            "program": "${workspaceFolder}/build/bin/rasterize-3d.exe",
             "args": ["--model-height", "30",
                      "--model-file", "${workspaceFolder}/construction/3d-model-rasterization/models/dragon.obj", "--show-stats", "--output-cross-model"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
-            "environment": [],
+            "env": {
+                "Path": "${env:Path};${workspaceFolder}\\vcpkg\\installed\\x64-windows\\bin"
+            },
+            "externalConsole": false
+        },
+        {
+            "name": "Rasterize 3d Tests",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/bin/test.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "Path": "${env:Path};${workspaceFolder}\\vcpkg\\installed\\x64-windows\\bin"
+            },
             "externalConsole": false
         }
     ]

@@ -43,7 +43,6 @@ private:
         const double layerPosition,
         TMember member,
         PointComparisonMethod pointOrderingMethod);
-    void slicePolygons(const LineSegment2D &slice, std::vector<std::vector<LineSegment2D>> &polygons);
 
 private:
     const ModelBuilder &source;
