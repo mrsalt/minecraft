@@ -84,15 +84,14 @@ void drawPolygonsToFile(string filename, const vector<vector<LineSegment2D>> &po
     cairo_set_line_width(cr, 2);
 
     uint32_t count = 0;
-    double maxY = scale * (yExtent + padding * 2); // svg Y origin is backwards from what I'm used too...
     for (auto &polygon : polygons)
     {
         set_color_based_on_polygon(cr, polygon, count++);
         const auto &first = polygon.front().first;
-        cairo_move_to(cr, scale * (first.x - rect.min.x + padding), maxY - scale * (first.y - rect.min.y + padding));
+        cairo_move_to(cr, scale * (first.x - rect.min.x + padding), scale * (first.y - rect.min.y + padding));
         for (const auto &segment : polygon)
         {
-            cairo_line_to(cr, scale * (segment.second.x - rect.min.x + padding), maxY - scale * (segment.second.y - rect.min.y + padding));
+            cairo_line_to(cr, scale * (segment.second.x - rect.min.x + padding), scale * (segment.second.y - rect.min.y + padding));
         }
         cairo_stroke(cr);
     }

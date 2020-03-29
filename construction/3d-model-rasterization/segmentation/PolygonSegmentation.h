@@ -12,9 +12,8 @@ void slicePolygons(const LineSegment2D &slice, std::vector<std::vector<LineSegme
 
 struct DividingSegment
 {
-    LineSegment2D *line;
+    const LineSegment2D *line;
     Point2D intersection_point;
-    bool assigned{false};
 };
 
 enum class Direction
@@ -23,18 +22,29 @@ enum class Direction
     COUNTER_CLOCKWISE = 1
 };
 
-class Segmenter
+class SliceData
 {
 public:
-    Segmenter(const LineSegment2D &slice, std::vector<std::vector<LineSegment2D>> &polygons);
-    size_t findIntersections();
+    SliceData(const LineSegment2D &slice, const std::vector<std::vector<LineSegment2D>> &polygons);
+
     std::vector<std::vector<LineSegment2D>> segmentPolygons();
+    const std::vector<DividingSegment> &intersections() { return intersecting; }
+
+public:
+    const LineSegment2D slice;
+    const bool horizontal_slice;
+    const bool vertical_slice;
+
+private:
+    const std::vector<std::vector<LineSegment2D>> &polygons;
+    std::set<const LineSegment2D *> set_intersecting;
+    std::vector<DividingSegment> intersecting;
 
 private:
     template <class I>
-    I getIterator(LineSegment2D *segment)
+    I getIterator(const LineSegment2D *segment)
     {
-        for (auto &shape : polygons)
+        for (auto &shape : const_cast<vector<vector<LineSegment2D>> &>(polygons))
         {
             if (segment >= shape.data() && segment < shape.data() + shape.size())
             {
@@ -45,18 +55,16 @@ private:
         throw std::runtime_error("Logic error -- no polygon found containing segment");
     }
 
-    bool isPointLeftOfSlice(const Point2D &p) const
+    bool pointingRightOfSlice(const LineSegment2D *line) const
     {
         // assumptions: slice is either horizontal or vertical
         if (horizontal_slice)
         {
-            assert(p.y != slice.first.y);
-            return p.y > slice.first.y;
+            return line->first.y > line->second.y;
         }
         else if (vertical_slice)
         {
-            assert(p.x != slice.first.x);
-            return p.x < slice.first.x;
+            return line->second.x > line->first.x;
         }
         throw std::runtime_error("Logic error -- only horizontal/vertical slice support built in.");
     }
@@ -65,9 +73,9 @@ private:
     {
         size_t index = current - intersecting.data();
         if (index % 2 == 0)
-            return isPointLeftOfSlice(current->line->first) ? Direction::COUNTER_CLOCKWISE : Direction::CLOCKWISE;
+            return pointingRightOfSlice(current->line) ? Direction::COUNTER_CLOCKWISE : Direction::CLOCKWISE;
         else
-            return isPointLeftOfSlice(current->line->first) ? Direction::CLOCKWISE : Direction::COUNTER_CLOCKWISE;
+            return pointingRightOfSlice(current->line) ? Direction::CLOCKWISE : Direction::COUNTER_CLOCKWISE;
     }
 
     static void reverse(Direction &direction)
@@ -80,9 +88,9 @@ private:
 
     // This method iterates over the polygon until an intersecting line segment is reached, or the initial line segment is reached.
     DividingSegment &iterate(
-        LineSegment2D *start,
-        Direction direction,
-        const std::function<void(LineSegment2D *)> &callback = std::function<void(LineSegment2D *)>() // invoked when the line segment is NOT an intersecting segment.
+        const LineSegment2D *start,
+        const Direction direction,
+        const std::function<void(const LineSegment2D *)> &callback = std::function<void(const LineSegment2D *)>() // invoked when the line segment is NOT an intersecting segment.
     )
     {
         if (direction == Direction::CLOCKWISE)
@@ -93,8 +101,8 @@ private:
 
     template <class I>
     DividingSegment &iterate_helper(
-        LineSegment2D *start,
-        const std::function<void(LineSegment2D *)> &callback)
+        const LineSegment2D *start,
+        const std::function<void(const LineSegment2D *)> &callback)
     {
         auto it = getIterator<I>(start);
         auto begin = it;
@@ -104,7 +112,7 @@ private:
             auto it_intersecting = set_intersecting.find(&(*it));
             if (it_intersecting != set_intersecting.end())
             {
-                LineSegment2D *ls = &(*it);
+                const LineSegment2D *ls = &(*it);
                 for (auto &ds : intersecting)
                 {
                     if (ds.line == ls)
@@ -121,7 +129,7 @@ private:
         throw std::runtime_error("Logic error -- failed to find DividingSegment");
     }
 
-    const std::vector<LineSegment2D> *polygonOwningSegment(LineSegment2D *segment) const
+    const std::vector<LineSegment2D> *polygonOwningSegment(const LineSegment2D *segment) const
     {
         for (auto &shape : polygons)
         {
@@ -131,13 +139,5 @@ private:
         throw std::runtime_error("Logic error -- cannot locate polygon owning line segment");
     }
 
-    DividingSegment &buildNewSegment(DividingSegment &first, Direction direction, std::vector<LineSegment2D> &new_polygon);
-
-private:
-    const LineSegment2D &slice;
-    std::vector<std::vector<LineSegment2D>> &polygons;
-    const bool horizontal_slice;
-    const bool vertical_slice;
-    std::set<LineSegment2D *> set_intersecting;
-    std::vector<DividingSegment> intersecting;
+    DividingSegment &buildNewSegment(const DividingSegment &first, const Direction direction, std::vector<LineSegment2D> &new_polygon);
 };
