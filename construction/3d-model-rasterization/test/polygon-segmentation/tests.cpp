@@ -1,6 +1,7 @@
 #include "gtest/gtest.h"
 #include "PolygonSegmentation.h"
 #include "cairo-util.h"
+#include "string_format.h"
 
 using namespace std;
 
@@ -23,6 +24,7 @@ vector<LineSegment2D> makeSquare(const Rectangle &rect)
                                   {rect.max.y, rect.min.y}});
 }
 
+/*
 TEST(PolygonSegmentation, Test1)
 {
     vector<vector<LineSegment2D>> polygons;
@@ -51,3 +53,40 @@ TEST(PolygonSegmentation, Test2)
     slicePolygons(slice2, polygons);
     drawPolygonsToFile("Test2-2.svg", polygons);
 }
+*/
+
+TEST(PolygonSegmentation, Test3)
+{
+    vector<vector<LineSegment2D>> polygons;
+    polygons.push_back(makePolygonFromPoints({ {68, 284}, { 109,147 }, { 212,66 }, { 355,101 }, { 289,255 }, { 257,392 }, { 386,335 }, { 443,223 }, { 510,125 }, { 625,32 }, { 800,74 }, { 820,248 }, { 686,372 }, { 470,494 }, { 316,556 }, { 118,448 } }));
+    polygons.push_back(makePolygonFromPoints({ { 553,262 }, { 654,200 }, { 683,287 }, { 572,380 }, { 502,373 } }));
+    drawPolygonsToFile("Test3-0.svg", polygons);
+
+    for (double y = 50; y < 600; y += 50)
+    {
+        LineSegment2D slice1{ {0, y}, {900, y} };
+        slicePolygons(slice1, polygons);
+        drawPolygonsToFile(format("Test3-y-%d.svg", (int)y).c_str(), polygons);
+    }
+
+    for (double x = 50; x < 1000; x += 50)
+    {
+        LineSegment2D slice1{ {x, 0}, {x, 800} };
+        slicePolygons(slice1, polygons);
+        drawPolygonsToFile(format("Test3-x-%d.svg", (int)x).c_str(), polygons);
+    }
+}
+
+/*
+TEST(PolygonSegmentation, Test4)
+{
+    vector<vector<LineSegment2D>> polygons;
+    polygons.push_back(makePolygonFromPoints({{-3, -3}, {-3, 0}, {-3, 3}, {3, 3}, {3, 0}, {3, -3}}));
+
+    LineSegment2D slice1{{-5, 0}, {5, 0}};
+
+    drawPolygonsToFile("Test4-0.svg", polygons);
+    slicePolygons(slice1, polygons);
+    drawPolygonsToFile("Test4-1.svg", polygons);
+}
+*/

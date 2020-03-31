@@ -14,6 +14,14 @@ struct DividingSegment
 {
     const LineSegment2D *line;
     Point2D intersection_point;
+    bool is_even; // If ALL dividing segments spanned the slice (see spansSlice), this
+                  // would alternate true/false always.  However, the universe of possibilities
+                  // allows for a line segment to begin or end on a dividing slice, which allows
+                  // two dividing segments in a row to be even or odd.
+    bool spansSlice() const
+    {
+        return line->first != intersection_point && line->second != intersection_point;
+    }
 };
 
 enum class Direction
@@ -41,6 +49,8 @@ private:
     std::vector<DividingSegment> intersecting;
 
 private:
+    void handleSegmentsOnSlice(std::vector<const LineSegment2D*> &segmentsOnSlice);
+
     template <class I>
     I getIterator(const LineSegment2D *segment)
     {
@@ -53,6 +63,35 @@ private:
             }
         }
         throw std::runtime_error("Logic error -- no polygon found containing segment");
+    }
+
+    bool onSlice(const Point2D& p) const
+    {
+        if (horizontal_slice)
+        {
+            return (p.y == slice.first.y);
+        }
+        else if (vertical_slice)
+        {
+            return (p.x == slice.first.x);
+        }
+        throw std::runtime_error("Logic error -- only horizontal/vertical slice support built in.");
+    }
+
+    bool isLeftOfSlice(const Point2D &p) const
+    {
+        // assumptions: slice is either horizontal or vertical
+        if (horizontal_slice)
+        {
+            assert(p.y != slice.first.y);
+            return p.y > slice.first.y;
+        }
+        else if (vertical_slice)
+        {
+            assert(p.x != slice.first.x);
+            return p.x < slice.first.x;
+        }
+        throw std::runtime_error("Logic error -- only horizontal/vertical slice support built in.");
     }
 
     bool pointingRightOfSlice(const LineSegment2D *line) const
@@ -71,8 +110,7 @@ private:
 
     Direction naturalDirection(DividingSegment *current) const
     {
-        size_t index = current - intersecting.data();
-        if (index % 2 == 0)
+        if (current->is_even)
             return pointingRightOfSlice(current->line) ? Direction::COUNTER_CLOCKWISE : Direction::CLOCKWISE;
         else
             return pointingRightOfSlice(current->line) ? Direction::CLOCKWISE : Direction::COUNTER_CLOCKWISE;

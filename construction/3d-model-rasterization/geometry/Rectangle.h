@@ -18,9 +18,9 @@ public:
 
     bool overlaps(const Rectangle &other) const
     {
-        if (other.max.x < min.x || other.min.x >= max.x)
+        if (other.max.x < min.x || other.min.x > max.x)
             return false;
-        if (other.max.y < min.y || other.min.y >= max.y)
+        if (other.max.y < min.y || other.min.y > max.y)
             return false;
         return true;
     }

@@ -13,35 +13,98 @@ SliceData::SliceData(const LineSegment2D &slice, const vector<vector<LineSegment
     // Step 1: determine all line segments intersected by the 'slicing' line
     for (auto &shape : polygons)
     {
+        vector<const LineSegment2D*> segmentsOnSlice;
+
         for (auto &segment : shape)
         {
             Point2D intersection;
             if (segment.intersects(slice, intersection))
             {
-                intersecting.push_back({&segment, intersection});
-                set_intersecting.insert(&segment);
+                if (segment.first == intersection || segment.second == intersection)
+                {
+                    segmentsOnSlice.push_back(&segment);
+                }
+                else
+                {
+                    handleSegmentsOnSlice(segmentsOnSlice);
+                    intersecting.push_back({ &segment, intersection});
+                    set_intersecting.insert(&segment);
+                }
+            }
+            else
+            {
+                handleSegmentsOnSlice(segmentsOnSlice);
             }
         }
     }
-    if (intersecting.size() % 2 != 0)
-        throw runtime_error("Logic error -- count of intersecting line segments must be even (or our slicing line did not make it all the way through a polygon!)");
+
+    //if (intersecting.size() % 2 != 0)
+    //    throw runtime_error("Logic error -- count of intersecting line segments must be even (or our slicing line did not make it all the way through a polygon!)");
+    //This assertion is valid only if no line segments have a line end on the slice.
+
     if (!intersecting.empty())
     {
-        std::sort(intersecting.begin(), intersecting.end(), [this](const DividingSegment &a, const DividingSegment &b) {
+        std::stable_sort(intersecting.begin(), intersecting.end(), [this](const DividingSegment &a, const DividingSegment &b) {
             return this->slice.first.relativeDistance(a.intersection_point) < this->slice.first.relativeDistance(b.intersection_point);
         });
-        // We must account for the possibility that polygons share an edge.
+        // We must account for the possibility that two different polygons share an edge.
         // in this case, the edge that comes first is the one belonging to the
         // polygon that includes the immediately preceding intersecting line.
         for (size_t i = 2; i < intersecting.size() - 1; i++)
         {
             if (intersecting[i].intersection_point == intersecting[i - 1].intersection_point)
             {
-                if (polygonOwningSegment(intersecting[i].line) == polygonOwningSegment(intersecting[i - 2].line))
+                if (polygonOwningSegment(intersecting[i].line) == polygonOwningSegment(intersecting[i - 2].line) &&
+                    polygonOwningSegment(intersecting[i].line) != polygonOwningSegment(intersecting[i - 1].line))
                     swap(intersecting[i], intersecting[i - 1]);
             }
         }
+        bool is_even = true;
+        for (size_t i = 0; i < intersecting.size(); i++)
+        {
+            if (i > 0)
+            {
+                if (!intersecting[i - 1].spansSlice())
+                    is_even = !is_even;
+            }
+            intersecting[i].is_even = is_even;
+            is_even = !is_even;
+        }
     }
+}
+
+void SliceData::handleSegmentsOnSlice(vector<const LineSegment2D*> &segmentsOnSlice)
+{
+    if (segmentsOnSlice.empty())
+        return;
+    assert(segmentsOnSlice.size() > 1);
+
+    while (true)
+    {
+        // if the segments don't cross the slice, but merely run along it for some number of
+        // segments, we can ignore them completely.
+        bool compareFirstToSecond = onSlice(segmentsOnSlice.front()->second);
+        if (compareFirstToSecond)
+        {
+            if (isLeftOfSlice(segmentsOnSlice.front()->first) == isLeftOfSlice(segmentsOnSlice.back()->second))
+                break;
+        }
+        else
+        {
+            assert(onSlice(segmentsOnSlice.front()->first));
+            if (isLeftOfSlice(segmentsOnSlice.front()->second) == isLeftOfSlice(segmentsOnSlice.back()->first))
+                break;
+        }
+        Point2D intersection = compareFirstToSecond ? segmentsOnSlice.front()->second : segmentsOnSlice.front()->first;
+
+        intersecting.push_back({ segmentsOnSlice.front(), intersection });
+        set_intersecting.insert(segmentsOnSlice.front());
+        intersecting.push_back({ segmentsOnSlice.back(), intersection });
+        set_intersecting.insert(segmentsOnSlice.back());
+
+        break;
+    }
+    segmentsOnSlice.clear();
 }
 
 void addSegment(const LineSegment2D &segment, vector<LineSegment2D> &new_polygon)
@@ -72,10 +135,10 @@ DividingSegment &SliceData::buildNewSegment(const DividingSegment &first, const 
                new_polygon);
 
     size_t index = &s1 - intersecting.data();
-    if (index % 2 == 1)
-        index--;
-    else
+    if (s1.is_even)
         index++;
+    else
+        index--;
 
     assert(index >= 0 && index < intersecting.size());
 
