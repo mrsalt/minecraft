@@ -71,6 +71,12 @@ SliceData::SliceData(const LineSegment2D &slice, const vector<vector<LineSegment
             is_even = !is_even;
         }
     }
+    int i = 0;
+    for (auto& ds : intersecting)
+    {
+        size_t p = polygonOwningSegment(ds.line) - polygons.data();
+        cout << "segment " << i++ << " (" << *ds.line << ") owned by polygon " << p << endl;
+    }
 }
 
 void SliceData::handleSegmentsOnSlice(vector<const LineSegment2D*> &segmentsOnSlice)

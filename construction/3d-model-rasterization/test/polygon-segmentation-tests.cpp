@@ -23,7 +23,40 @@ vector<LineSegment2D> makeSquare(const Rectangle &rect)
                                   {rect.max.y, rect.max.y},
                                   {rect.max.y, rect.min.y}});
 }
-/*
+
+void printPolygonBounds(const vector<vector<LineSegment2D>> & polygons)
+{
+    int i = 0;
+    for (auto &shape : polygons)
+    {
+        Point2D min = shape.front().first;
+        Point2D max = shape.front().first;
+        for (auto &segment : shape)
+        {
+            if (segment.first.x < min.x)
+                min.x = segment.first.x;
+            else if (segment.first.x > max.x)
+                max.x = segment.first.x;
+            if (segment.first.y < min.y)
+                min.y = segment.first.y;
+            else if (segment.first.y > max.y)
+                max.y = segment.first.y;
+        }
+        cout << "Polygon #" << i << ", Segments: " << shape.size() << ", Bounds: " << min << " to " << max << " (" << max.x - min.x << " x " << max.y - min.y << ")" << endl;
+        cout << "    ";
+        bool first = true;
+        for (auto& segment : shape)
+        {
+            if (!first)
+                cout << ", ";
+            cout << segment.first;
+            first = false;
+        }
+        cout << endl;
+        i++;
+    }
+}
+
 TEST(PolygonSegmentation, Test1)
 {
     vector<vector<LineSegment2D>> polygons;
@@ -37,6 +70,7 @@ TEST(PolygonSegmentation, Test1)
     slicePolygons(slice2, polygons);
     drawPolygonsToFile("Test1-2.svg", polygons);
 }
+
 TEST(PolygonSegmentation, Test2)
 {
     vector<vector<LineSegment2D>> polygons;
@@ -51,7 +85,6 @@ TEST(PolygonSegmentation, Test2)
     slicePolygons(slice2, polygons);
     drawPolygonsToFile("Test2-2.svg", polygons);
 }
-*/
 TEST(PolygonSegmentation, Test3)
 {
     vector<vector<LineSegment2D>> polygons;
@@ -64,6 +97,9 @@ TEST(PolygonSegmentation, Test3)
         LineSegment2D slice1{ {0, y}, {900, y} };
         slicePolygons(slice1, polygons);
         drawPolygonsToFile(format("Test3-y-%d.svg", (int)y).c_str(), polygons);
+        //cout << "After slice " << slice1 << endl;
+        //printPolygonBounds(polygons);
+        //cout << endl;
     }
 
     for (double x = 50; x < 1000; x += 50)
@@ -71,9 +107,12 @@ TEST(PolygonSegmentation, Test3)
         LineSegment2D slice1{ {x, 0}, {x, 800} };
         slicePolygons(slice1, polygons);
         drawPolygonsToFile(format("Test3-x-%d.svg", (int)x).c_str(), polygons);
+        //cout << "After slice " << slice1 << endl;
+        //printPolygonBounds(polygons);
+        //cout << endl;
     }
 }
-/*
+
 TEST(PolygonSegmentation, Test4)
 {
     vector<vector<LineSegment2D>> polygons;
@@ -85,4 +124,3 @@ TEST(PolygonSegmentation, Test4)
     slicePolygons(slice1, polygons);
     drawPolygonsToFile("Test4-1.svg", polygons);
 }
-*/
