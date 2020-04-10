@@ -27,7 +27,7 @@ SliceData::SliceData(const LineSegment2D &slice, const vector<vector<LineSegment
                 else
                 {
                     handleSegmentsOnSlice(segmentsOnSlice);
-                    intersecting.push_back({ &segment, intersection});
+                    intersecting.push_back({ true, intersection, &segment }); // is even/odd will be determined later
                     set_intersecting.insert(&segment);
                 }
             }
@@ -103,9 +103,9 @@ void SliceData::handleSegmentsOnSlice(vector<const LineSegment2D*> &segmentsOnSl
         }
         Point2D intersection = compareFirstToSecond ? segmentsOnSlice.front()->second : segmentsOnSlice.front()->first;
 
-        intersecting.push_back({ segmentsOnSlice.front(), intersection });
+        intersecting.push_back({ true, intersection, segmentsOnSlice.front() });
         set_intersecting.insert(segmentsOnSlice.front());
-        intersecting.push_back({ segmentsOnSlice.back(), intersection });
+        intersecting.push_back({ true, intersection, segmentsOnSlice.back() });
         set_intersecting.insert(segmentsOnSlice.back());
 
         break;

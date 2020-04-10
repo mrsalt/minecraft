@@ -12,12 +12,13 @@ void slicePolygons(const LineSegment2D &slice, std::vector<std::vector<LineSegme
 
 struct DividingSegment
 {
-    const LineSegment2D *line;
-    Point2D intersection_point;
     bool is_even; // If ALL dividing segments spanned the slice (see spansSlice), this
                   // would alternate true/false always.  However, the universe of possibilities
                   // allows for a line segment to begin or end on a dividing slice, which allows
                   // two dividing segments in a row to be even or odd.
+    Point2D intersection_point;
+    const LineSegment2D* line;
+
     bool spansSlice() const
     {
         return line->first != intersection_point && line->second != intersection_point;
