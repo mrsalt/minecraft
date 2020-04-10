@@ -154,6 +154,13 @@ DividingSegment &SliceData::buildNewSegment(const DividingSegment &first, const 
     return s2;
 }
 
+void eraseFromPolygonset(const std::vector<LineSegment2D>* poly, set<const vector<LineSegment2D>*> & nonIntersectingPolygons)
+{
+    auto it = nonIntersectingPolygons.find(poly);
+    if (it != nonIntersectingPolygons.end())
+        nonIntersectingPolygons.erase(it);
+}
+
 vector<vector<LineSegment2D>> SliceData::segmentPolygons()
 {
     // Step 2:
@@ -187,9 +194,7 @@ vector<vector<LineSegment2D>> SliceData::segmentPolygons()
             Direction direction = naturalDirection(current);
             assigned[i] = true;
             auto currentPoly = polygonOwningSegment(current->line);
-            auto it = nonIntersectingPolygons.find(currentPoly);
-            if (it != nonIntersectingPolygons.end())
-                nonIntersectingPolygons.erase(it);
+            eraseFromPolygonset(currentPoly, nonIntersectingPolygons);
             vector<LineSegment2D> new_polygon;
             while (true)
             {
@@ -199,6 +204,7 @@ vector<vector<LineSegment2D>> SliceData::segmentPolygons()
                 auto nextPoly = polygonOwningSegment(next.line);
                 if (nextPoly != currentPoly)
                 {
+                    eraseFromPolygonset(nextPoly, nonIntersectingPolygons);
                     direction = naturalDirection(&next);
                     currentPoly = nextPoly;
                 }
