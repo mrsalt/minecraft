@@ -78,15 +78,17 @@ SliceData::SliceData(const LineSegment2D &slice, const vector<vector<LineSegment
             }
         }
         bool is_even = true;
+        Point2D prevIntersection;
         for (size_t i = 0; i < intersecting.size(); i++)
         {
             if (i > 0)
             {
-                if (!intersecting[i - 1].spansSlice())
+                if (intersecting[i].intersection_point.isReallyCloseTo(prevIntersection))
                     is_even = !is_even;
             }
             intersecting[i].is_even = is_even;
             is_even = !is_even;
+            prevIntersection = intersecting[i].intersection_point;
         }
     }
     int i = 0;
