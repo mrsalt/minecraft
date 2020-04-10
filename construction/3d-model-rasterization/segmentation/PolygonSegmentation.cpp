@@ -57,7 +57,7 @@ SliceData::SliceData(const LineSegment2D &slice, const vector<vector<LineSegment
         std::stable_sort(intersecting.begin(), intersecting.end(), [this](const DividingSegment &a, const DividingSegment &b) {
             return this->slice.first.relativeDistance(a.intersection_point) < this->slice.first.relativeDistance(b.intersection_point);
         });
-        
+
         //int i = 0;
         //for (auto& ds : intersecting)
         //{
@@ -79,25 +79,32 @@ SliceData::SliceData(const LineSegment2D &slice, const vector<vector<LineSegment
         }
         bool is_even = true;
         Point2D prevIntersection;
+        size_t prevPolygon;
         for (size_t i = 0; i < intersecting.size(); i++)
         {
+            auto& ds = intersecting[i];
+            size_t currentPolygon = polygonOwningSegment(ds.line) - polygons.data();
             if (i > 0)
             {
-                if (intersecting[i].intersection_point.isReallyCloseTo(prevIntersection))
+                // If we happen to intersect right on a point in an existing polygon, we'll get two dividing segments.
+                // We don't want to toggle on the second one (toggling on line 93 reverses the toggle done on line 96).
+                bool sameLine = currentPolygon == prevPolygon && ds.intersection_point.isReallyCloseTo(prevIntersection);
+                if (sameLine)
                     is_even = !is_even;
             }
-            intersecting[i].is_even = is_even;
+            ds.is_even = is_even;
             is_even = !is_even;
-            prevIntersection = intersecting[i].intersection_point;
+            prevIntersection = ds.intersection_point;
+            prevPolygon = currentPolygon;
         }
     }
-    int i = 0;
-    for (auto& ds : intersecting)
-    {
-        size_t p = polygonOwningSegment(ds.line) - polygons.data();
-        Rectangle bounds = getBounds(polygons[p]);
-        cout << i++ << ": " << ds.intersection_point <<", " << *ds.line << " owned by " << p << " (bounds: " << bounds.min << "-" << bounds.max << ")" << endl;
-    }
+    //int i = 0;
+    //for (auto& ds : intersecting)
+    //{
+    //    size_t p = polygonOwningSegment(ds.line) - polygons.data();
+    //    Rectangle bounds = getBounds(polygons[p]);
+    //    cout << i++ << ": " << ds.intersection_point <<", " << *ds.line << " owned by " << p << " (bounds: " << bounds.min << "-" << bounds.max << ")" << endl;
+    //}
 }
 
 void SliceData::handleSegmentsOnSlice(vector<const LineSegment2D*> &segmentsOnSlice)
