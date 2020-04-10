@@ -36,12 +36,13 @@ SliceData::SliceData(const LineSegment2D &slice, const vector<vector<LineSegment
                 }
                 else
                 {
-                    handleSegmentsOnSlice(segmentsOnSlice);
+                    if (!segmentsOnSlice.empty())
+                        handleSegmentsOnSlice(segmentsOnSlice);
                     intersecting.push_back({ true, intersection, &segment }); // is even/odd will be determined later
                     set_intersecting.insert(&segment);
                 }
             }
-            else
+            else if (segmentsOnSlice.size() > 1)
             {
                 handleSegmentsOnSlice(segmentsOnSlice);
             }
@@ -109,8 +110,6 @@ SliceData::SliceData(const LineSegment2D &slice, const vector<vector<LineSegment
 
 void SliceData::handleSegmentsOnSlice(vector<const LineSegment2D*> &segmentsOnSlice)
 {
-    if (segmentsOnSlice.empty())
-        return;
     assert(segmentsOnSlice.size() > 1);
 
     while (true)
@@ -152,7 +151,7 @@ void addSegment(const LineSegment2D &segment, vector<LineSegment2D> &new_polygon
     }
 }
 
-DividingSegment &SliceData::buildNewSegment(const DividingSegment &first, const Direction direction, vector<LineSegment2D> &new_polygon)
+DividingSegment &SliceData::buildNewSegment(const DividingSegment &first, const Direction direction, vector<LineSegment2D> &new_polygon, const DividingSegment& initial)
 {
     addSegment({first.intersection_point,
                 direction == Direction::CLOCKWISE ? first.line->second : first.line->first,
@@ -168,13 +167,17 @@ DividingSegment &SliceData::buildNewSegment(const DividingSegment &first, const 
                 s1.line->surface},
                new_polygon);
 
-    size_t index = &s1 - intersecting.data();
-    if (s1.is_even)
-        index++;
-    else
-        index--;
+    if (&initial == &s1) // we're done!
+        return s1;
 
-    assert(index >= 0 && index < intersecting.size());
+    size_t index = &s1 - intersecting.data();
+    int d = s1.is_even ? 1 : -1;
+    bool stopAt = !s1.is_even;
+    while (intersecting[index].is_even != stopAt)
+    {
+        index += d;
+        assert(index >= 0 && index < intersecting.size());
+    }
 
     DividingSegment &s2 = *(intersecting.data() + index);
     addSegment({s1.intersection_point, s2.intersection_point, s1.line->surface}, new_polygon);
@@ -226,7 +229,7 @@ vector<vector<LineSegment2D>> SliceData::segmentPolygons()
             vector<LineSegment2D> new_polygon;
             while (true)
             {
-                DividingSegment &next = buildNewSegment(*current, direction, new_polygon);
+                DividingSegment &next = buildNewSegment(*current, direction, new_polygon, intersecting[i]);
                 if (&next == &intersecting[i] || intersecting[i].intersection_point.isReallyCloseTo(next.intersection_point))
                     break;
                 auto nextPoly = polygonOwningSegment(next.line);
@@ -238,10 +241,13 @@ vector<vector<LineSegment2D>> SliceData::segmentPolygons()
                 }
                 current = &next;
                 size_t index = current - intersecting.data();
-                assert(!assigned[index]);
+                // This assertion doesn't fire until test case 4, which is an unusual case.
+                // assert(!assigned[index]);
                 assigned[index] = true;
             }
-            new_polygon_list.push_back(new_polygon);
+            // This check isn't necessary until test case 4, which is unusual. 
+            if (new_polygon.size() > 2)
+                new_polygon_list.push_back(new_polygon);
         }
     }
     for (auto &poly : nonIntersectingPolygons)

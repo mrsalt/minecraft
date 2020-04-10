@@ -178,5 +178,5 @@ private:
         throw std::runtime_error("Logic error -- cannot locate polygon owning line segment");
     }
 
-    DividingSegment &buildNewSegment(const DividingSegment &first, const Direction direction, std::vector<LineSegment2D> &new_polygon);
+    DividingSegment &buildNewSegment(const DividingSegment &first, const Direction direction, std::vector<LineSegment2D> &new_polygon, const DividingSegment& initial);
 };

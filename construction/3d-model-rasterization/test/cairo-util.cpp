@@ -101,7 +101,7 @@ void drawPolygonsToFile(string filename, const vector<vector<LineSegment2D>> &po
     else
     {
         padding = yExtent / 10.0;
-        scale = desiredSize / (xExtent + padding * 2);
+        scale = desiredSize / (yExtent + padding * 2);
     }
 
     surface = cairo_svg_surface_create(filename.c_str(),
