@@ -23,7 +23,6 @@ vector<LineSegment2D> makeSquare(const Rectangle &rect)
                                   {rect.max.y, rect.max.y},
                                   {rect.max.y, rect.min.y}});
 }
-
 /*
 TEST(PolygonSegmentation, Test1)
 {
@@ -38,7 +37,6 @@ TEST(PolygonSegmentation, Test1)
     slicePolygons(slice2, polygons);
     drawPolygonsToFile("Test1-2.svg", polygons);
 }
-
 TEST(PolygonSegmentation, Test2)
 {
     vector<vector<LineSegment2D>> polygons;
@@ -54,7 +52,6 @@ TEST(PolygonSegmentation, Test2)
     drawPolygonsToFile("Test2-2.svg", polygons);
 }
 */
-
 TEST(PolygonSegmentation, Test3)
 {
     vector<vector<LineSegment2D>> polygons;
@@ -76,7 +73,6 @@ TEST(PolygonSegmentation, Test3)
         drawPolygonsToFile(format("Test3-x-%d.svg", (int)x).c_str(), polygons);
     }
 }
-
 /*
 TEST(PolygonSegmentation, Test4)
 {

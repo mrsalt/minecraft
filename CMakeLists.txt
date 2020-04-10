@@ -20,9 +20,14 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
+# Tell visual studio to compile with Just My Code, so that you don't
+# have to step through STL like crazy (try stepping through <functional>...
+# without pulling your hair out)
 if(MSVC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "19.15")
     add_compile_options( /JMC )
 endif()
+
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 # Prevent overriding the parent project's compiler/linker
 # settings on Windows

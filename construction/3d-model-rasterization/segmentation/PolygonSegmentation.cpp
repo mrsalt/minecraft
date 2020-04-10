@@ -193,7 +193,7 @@ vector<vector<LineSegment2D>> SliceData::segmentPolygons()
                 auto nextPoly = polygonOwningSegment(next.line);
                 if (nextPoly != currentPoly)
                 {
-                    reverse(direction);
+                    direction = naturalDirection(&next);
                     currentPoly = nextPoly;
                 }
                 current = &next;

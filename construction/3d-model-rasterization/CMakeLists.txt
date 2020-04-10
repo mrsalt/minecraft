@@ -30,6 +30,11 @@ add_executable(rasterize-3d
 
 target_link_libraries(rasterize-3d rasterize-lib)
 
+set_target_properties(rasterize-3d rasterize-lib
+    PROPERTIES
+    FOLDER "construction/3d-model-rasterization"
+)
+
 add_subdirectory(test)
 
 #set(CPACK_PROJECT_NAME ${PROJECT_NAME})

@@ -99,7 +99,7 @@ private:
         // assumptions: slice is either horizontal or vertical
         if (horizontal_slice)
         {
-            return line->first.y > line->second.y;
+            return line->second.y > line->first.y;
         }
         else if (vertical_slice)
         {
