@@ -47,12 +47,20 @@ SliceData::SliceData(const LineSegment2D &slice, const vector<vector<LineSegment
         std::stable_sort(intersecting.begin(), intersecting.end(), [this](const DividingSegment &a, const DividingSegment &b) {
             return this->slice.first.relativeDistance(a.intersection_point) < this->slice.first.relativeDistance(b.intersection_point);
         });
+        
+        int i = 0;
+        for (auto& ds : intersecting)
+        {
+            size_t p = polygonOwningSegment(ds.line) - polygons.data();
+            cout << "segment " << i++ << " (" << *ds.line << ") owned by polygon " << p << endl;
+        }
+
         // We must account for the possibility that two different polygons share an edge.
         // in this case, the edge that comes first is the one belonging to the
         // polygon that includes the immediately preceding intersecting line.
         for (size_t i = 2; i < intersecting.size() - 1; i++)
         {
-            if (intersecting[i].intersection_point == intersecting[i - 1].intersection_point)
+            if (intersecting[i].intersection_point.isReallyCloseTo(intersecting[i - 1].intersection_point))
             {
                 if (polygonOwningSegment(intersecting[i].line) == polygonOwningSegment(intersecting[i - 2].line) &&
                     polygonOwningSegment(intersecting[i].line) != polygonOwningSegment(intersecting[i - 1].line))
@@ -199,7 +207,7 @@ vector<vector<LineSegment2D>> SliceData::segmentPolygons()
             while (true)
             {
                 DividingSegment &next = buildNewSegment(*current, direction, new_polygon);
-                if (&next == &intersecting[i])
+                if (intersecting[i].intersection_point.isReallyCloseTo(next.intersection_point))
                     break;
                 auto nextPoly = polygonOwningSegment(next.line);
                 if (nextPoly != currentPoly)
