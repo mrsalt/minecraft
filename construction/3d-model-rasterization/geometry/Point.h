@@ -30,6 +30,11 @@ struct Point2D
         return xDelta * xDelta + yDelta * yDelta;
     }
 
+    bool isReallyCloseTo(const Point2D& other) const
+    {
+        return relativeDistance(other) <= FLT_EPSILON * FLT_EPSILON;
+    }
+
     bool operator<(const Point2D &rhs) const
     {
         if (x < rhs.x)
