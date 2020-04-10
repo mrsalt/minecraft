@@ -2,6 +2,16 @@
 
 using namespace std;
 
+static Rectangle getBounds(const vector<LineSegment2D> polygon)
+{
+    Rectangle bounds = polygon.front().bounds;
+    for (const auto& segment : polygon)
+    {
+        bounds += segment.bounds;
+    }
+    return bounds;
+}
+
 SliceData::SliceData(const LineSegment2D &slice, const vector<vector<LineSegment2D>> &polygons)
     : polygons{polygons}, slice{slice}, horizontal_slice{slice.first.y == slice.second.y}, vertical_slice{slice.first.x == slice.second.x}
 {
@@ -48,12 +58,12 @@ SliceData::SliceData(const LineSegment2D &slice, const vector<vector<LineSegment
             return this->slice.first.relativeDistance(a.intersection_point) < this->slice.first.relativeDistance(b.intersection_point);
         });
         
-        int i = 0;
-        for (auto& ds : intersecting)
-        {
-            size_t p = polygonOwningSegment(ds.line) - polygons.data();
-            cout << "segment " << i++ << " (" << *ds.line << ") owned by polygon " << p << endl;
-        }
+        //int i = 0;
+        //for (auto& ds : intersecting)
+        //{
+        //    size_t p = polygonOwningSegment(ds.line) - polygons.data();
+        //    cout << "segment " << i++ << " (" << *ds.line << ") owned by polygon " << p << endl;
+        //}
 
         // We must account for the possibility that two different polygons share an edge.
         // in this case, the edge that comes first is the one belonging to the
@@ -83,7 +93,8 @@ SliceData::SliceData(const LineSegment2D &slice, const vector<vector<LineSegment
     for (auto& ds : intersecting)
     {
         size_t p = polygonOwningSegment(ds.line) - polygons.data();
-        cout << "segment " << i++ << " (" << *ds.line << ") owned by polygon " << p << endl;
+        Rectangle bounds = getBounds(polygons[p]);
+        cout << i++ << ": " << ds.intersection_point <<", " << *ds.line << " owned by " << p << " (bounds: " << bounds.min << "-" << bounds.max << ")" << endl;
     }
 }
 
@@ -207,7 +218,7 @@ vector<vector<LineSegment2D>> SliceData::segmentPolygons()
             while (true)
             {
                 DividingSegment &next = buildNewSegment(*current, direction, new_polygon);
-                if (intersecting[i].intersection_point.isReallyCloseTo(next.intersection_point))
+                if (&next == &intersecting[i] || intersecting[i].intersection_point.isReallyCloseTo(next.intersection_point))
                     break;
                 auto nextPoly = polygonOwningSegment(next.line);
                 if (nextPoly != currentPoly)
