@@ -7,6 +7,7 @@ include_directories(
 add_executable(test-rasterize-lib
     main.cpp
     cairo-util.cpp
+    polygon-expectations.cpp
     polygon-segmentation-tests.cpp
     ring-iterator-tests.cpp
 )

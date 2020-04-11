@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?> 
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  <Type Name="Point2D">
+    <DisplayString>{{ x={x,g}, y={y,g} }}</DisplayString>
+    <Expand>
+      <Item Name="[x]" ExcludeView="simple">x,g</Item>
+      <Item Name="[y]" ExcludeView="simple">y,g</Item>
+    </Expand>
+  </Type>
+</AutoVisualizer>

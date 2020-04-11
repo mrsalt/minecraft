@@ -5,6 +5,21 @@
 
 using namespace std;
 
+extern const char * test_1_step_0;
+extern const char * test_1_step_1;
+extern const char * test_1_step_2;
+extern const char * test_2_step_0;
+extern const char * test_2_step_1;
+extern const char * test_2_step_2;
+extern const char * test_3_step_0;
+extern const char * test_3_step_1;
+extern const char * test_3_step_2;
+extern const char * test_4_step_0;
+extern const char * test_4_step_1;
+extern const char * test_5_step_0;
+extern const char * test_5_step_1;
+extern const char * test_5_step_2;
+
 vector<LineSegment2D> makePolygonFromPoints(const vector<Point2D> points)
 {
     vector<LineSegment2D> polygon;
@@ -57,6 +72,26 @@ void printPolygonBounds(const vector<vector<LineSegment2D>> & polygons)
     }
 }
 
+string polygonsToString(const vector<vector<LineSegment2D>>& polygons, bool shortened = false)
+{
+    string ret;
+    int c = 0;
+    for (auto& poly : polygons)
+    {
+        ret += "\n";
+        ret += format("Polygon %d containing %d segments%s\n", c++, poly.size(), shortened ? "" : ":");
+        if (!shortened)
+        {
+            for (size_t i = 0; i < poly.size(); i++)
+            {
+                auto& seg = poly[i];
+                ret += format("  %zd: ", i) + seg.first.toString() + "-" + seg.second.toString() + "\n";
+            }
+        }
+    }
+    return ret;
+}
+
 TEST(PolygonSegmentation, Test1)
 {
     vector<vector<LineSegment2D>> polygons;
@@ -65,10 +100,15 @@ TEST(PolygonSegmentation, Test1)
     LineSegment2D slice2{{0, -5}, {0, 5}};
 
     drawPolygonsToFile("Test1-0.svg", polygons);
+    ASSERT_EQ(polygonsToString(polygons), test_1_step_0);
+
     slicePolygons(slice1, polygons);
     drawPolygonsToFile("Test1-1.svg", polygons);
+    ASSERT_EQ(polygonsToString(polygons), test_1_step_1);
+
     slicePolygons(slice2, polygons);
     drawPolygonsToFile("Test1-2.svg", polygons);
+    ASSERT_EQ(polygonsToString(polygons), test_1_step_2);
 }
 
 TEST(PolygonSegmentation, Test2)
@@ -80,10 +120,15 @@ TEST(PolygonSegmentation, Test2)
     LineSegment2D slice2{{0, -5}, {0, 5}};
 
     drawPolygonsToFile("Test2-0.svg", polygons);
+    ASSERT_EQ(polygonsToString(polygons), test_2_step_0);
+
     slicePolygons(slice1, polygons);
     drawPolygonsToFile("Test2-1.svg", polygons);
+    ASSERT_EQ(polygonsToString(polygons), test_2_step_1);
+
     slicePolygons(slice2, polygons);
     drawPolygonsToFile("Test2-2.svg", polygons);
+    ASSERT_EQ(polygonsToString(polygons), test_2_step_2);
 }
 TEST(PolygonSegmentation, Test3)
 {
@@ -91,6 +136,7 @@ TEST(PolygonSegmentation, Test3)
     polygons.push_back(makePolygonFromPoints({ {68, 284}, { 109,147 }, { 212,66 }, { 355,101 }, { 289,255 }, { 257,392 }, { 386,335 }, { 443,223 }, { 510,125 }, { 625,32 }, { 800,74 }, { 820,248 }, { 686,372 }, { 470,494 }, { 316,556 }, { 118,448 } }));
     polygons.push_back(makePolygonFromPoints({ { 553,262 }, { 654,200 }, { 683,287 }, { 572,380 }, { 502,373 } }));
     drawPolygonsToFile("Test3-0.svg", polygons);
+    ASSERT_EQ(polygonsToString(polygons), test_3_step_0);
 
     for (double y = 50; y < 600; y += 50)
     {
@@ -101,6 +147,7 @@ TEST(PolygonSegmentation, Test3)
         //printPolygonBounds(polygons);
         //cout << endl;
     }
+    ASSERT_EQ(polygonsToString(polygons), test_3_step_1);
 
     for (double x = 50; x < 1000; x += 50)
     {
@@ -111,6 +158,7 @@ TEST(PolygonSegmentation, Test3)
         //printPolygonBounds(polygons);
         //cout << endl;
     }
+    ASSERT_EQ(polygonsToString(polygons, true), test_3_step_2);
 }
 
 TEST(PolygonSegmentation, Test4)
@@ -121,6 +169,33 @@ TEST(PolygonSegmentation, Test4)
     LineSegment2D slice1{{-5, 0}, {5, 0}};
 
     drawPolygonsToFile("Test4-0.svg", polygons);
+    ASSERT_EQ(polygonsToString(polygons), test_4_step_0);
+
     slicePolygons(slice1, polygons);
     drawPolygonsToFile("Test4-1.svg", polygons);
+    ASSERT_EQ(polygonsToString(polygons), test_4_step_1);
+
+    slicePolygons(slice1, polygons);
+    drawPolygonsToFile("Test4-2.svg", polygons);
+    ASSERT_EQ(polygonsToString(polygons), test_4_step_1); // expecting no change from prior step
+}
+
+TEST(PolygonSegmentation, Test5)
+{
+    vector<vector<LineSegment2D>> polygons;
+    polygons.push_back(makePolygonFromPoints({ {0, 100}, {0, 200}, {100, 200}, {100, 100}, {175, 100}, {175, 0}, {75, 0}, {75, 100} }));
+
+    LineSegment2D slice1{ {-5, 100}, {200, 100} };
+    LineSegment2D slice2{ {87, -5}, {87, 205} };
+
+    drawPolygonsToFile("Test5-0.svg", polygons);
+    ASSERT_EQ(polygonsToString(polygons), test_5_step_0);
+
+    slicePolygons(slice1, polygons);
+    drawPolygonsToFile("Test5-1.svg", polygons);
+    ASSERT_EQ(polygonsToString(polygons), test_5_step_1);
+
+    slicePolygons(slice2, polygons);
+    drawPolygonsToFile("Test5-2.svg", polygons);
+    ASSERT_EQ(polygonsToString(polygons), test_5_step_2);
 }
