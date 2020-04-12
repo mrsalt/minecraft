@@ -8,7 +8,7 @@ using namespace std;
 Rectangle getBounds(const vector<LineSegment2D> polygon)
 {
     Rectangle bounds = polygon.front().bounds;
-    for (const auto& segment : polygon)
+    for (const auto &segment : polygon)
     {
         bounds += segment.bounds;
     }
@@ -47,34 +47,33 @@ void set_color_based_on_polygon(cairo_t *cr, const vector<LineSegment2D> &polygo
     cairo_set_source_rgba(cr, r, g, b, 0.5);
 }
 
-Point2D shrink_point(const Point2D& p, const Point2D& center, double half_width, double half_height, double max_shrink)
+Point2D shrink_point(const Point2D &p, const Point2D &center, double half_width, double half_height, double max_shrink)
 {
-    return { p.x + (center.x - p.x) / half_width * max_shrink,
-             p.y + (center.y - p.y) / half_height * max_shrink };
+    return {p.x + (center.x - p.x) / half_width * max_shrink,
+            p.y + (center.y - p.y) / half_height * max_shrink};
 }
 
-vector<LineSegment2D> shrink_polygon(const vector<LineSegment2D>& polygon, const double max_shrink)
+vector<LineSegment2D> shrink_polygon(const vector<LineSegment2D> &polygon, const double max_shrink)
 {
     Rectangle bounds = getBounds(polygon);
-    Point2D center = { (bounds.min.x + bounds.max.x) / 2., (bounds.min.y + bounds.max.y) / 2. };
+    Point2D center = {(bounds.min.x + bounds.max.x) / 2., (bounds.min.y + bounds.max.y) / 2.};
     vector<LineSegment2D> ret;
     double half_width = (bounds.max.x - bounds.min.x) / 2.;
     double half_height = (bounds.max.y - bounds.min.y) / 2.;
-    for (const auto& segment : polygon)
+    for (const auto &segment : polygon)
     {
-        ret.push_back({
-            shrink_point(segment.first, center, half_width, half_height, max_shrink),
-            shrink_point(segment.second, center, half_width, half_height, max_shrink),
-            segment.surface});
+        ret.push_back({shrink_point(segment.first, center, half_width, half_height, max_shrink),
+                       shrink_point(segment.second, center, half_width, half_height, max_shrink),
+                       segment.surface});
     }
     return ret;
 }
 
-void draw_polygon(const vector<LineSegment2D>& polygon, cairo_t* cr, double scale, Rectangle& rect, double padding)
+void draw_polygon(const vector<LineSegment2D> &polygon, cairo_t *cr, double scale, Rectangle &rect, double padding)
 {
-    const auto& first = polygon.front().first;
+    const auto &first = polygon.front().first;
     cairo_move_to(cr, scale * (first.x - rect.min.x + padding), scale * (first.y - rect.min.y + padding));
-    for (const auto& segment : polygon)
+    for (const auto &segment : polygon)
     {
         cairo_line_to(cr, scale * (segment.second.x - rect.min.x + padding), scale * (segment.second.y - rect.min.y + padding));
     }

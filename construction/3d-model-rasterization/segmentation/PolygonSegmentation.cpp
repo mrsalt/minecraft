@@ -5,19 +5,19 @@ using namespace std;
 static Rectangle getBounds(const vector<LineSegment2D> polygon)
 {
     Rectangle bounds = polygon.front().bounds;
-    for (const auto& segment : polygon)
+    for (const auto &segment : polygon)
     {
         bounds += segment.bounds;
     }
     return bounds;
 }
 
-size_t determineStartingSegment(const vector<LineSegment2D>& shape, const LineSegment2D & slice)
+size_t determineStartingSegment(const vector<LineSegment2D> &shape, const LineSegment2D &slice)
 {
     size_t nextBest = 0;
     for (size_t i = 0; i < shape.size(); i++)
     {
-        auto& segment = shape[i];
+        auto &segment = shape[i];
         Point2D intersection;
         bool online;
         if (segment.intersects(slice, intersection, online))
@@ -46,11 +46,11 @@ SliceData::SliceData(const LineSegment2D &slice, const vector<vector<LineSegment
     // Step 1: determine all line segments intersected by the 'slicing' line
     for (auto &shape : polygons)
     {
-        vector<const LineSegment2D*> segmentsOnSlice;
+        vector<const LineSegment2D *> segmentsOnSlice;
         size_t startAt = determineStartingSegment(shape, slice);
         for (size_t i = 0; i < shape.size(); i++)
         {
-            auto& segment = shape[(startAt + i) % shape.size()];
+            auto &segment = shape[(startAt + i) % shape.size()];
             Point2D intersection;
             bool online = false;
             if (segment.intersects(slice, intersection, online))
@@ -63,7 +63,7 @@ SliceData::SliceData(const LineSegment2D &slice, const vector<vector<LineSegment
                 {
                     if (!segmentsOnSlice.empty())
                         handleSegmentsOnSlice(segmentsOnSlice);
-                    intersecting.push_back({ true, intersection, &segment }); // is even/odd will be determined later
+                    intersecting.push_back({true, intersection, &segment}); // is even/odd will be determined later
                     set_intersecting.insert(&segment);
                 }
             }
@@ -110,7 +110,7 @@ SliceData::SliceData(const LineSegment2D &slice, const vector<vector<LineSegment
         size_t prevPolygon;
         for (size_t i = 0; i < intersecting.size(); i++)
         {
-            auto& ds = intersecting[i];
+            auto &ds = intersecting[i];
             size_t currentPolygon = polygonOwningSegment(ds.line) - polygons.data();
             if (i > 0)
             {
@@ -135,7 +135,7 @@ SliceData::SliceData(const LineSegment2D &slice, const vector<vector<LineSegment
     //}
 }
 
-void SliceData::handleSegmentsOnSlice(vector<const LineSegment2D*> &segmentsOnSlice)
+void SliceData::handleSegmentsOnSlice(vector<const LineSegment2D *> &segmentsOnSlice)
 {
     assert(segmentsOnSlice.size() > 1);
 
@@ -156,13 +156,13 @@ void SliceData::handleSegmentsOnSlice(vector<const LineSegment2D*> &segmentsOnSl
                 break;
         }
         if (compareFirstToSecond) // means that second has been tested and it IS on the slice
-            intersecting.push_back({ true, segmentsOnSlice.front()->second, segmentsOnSlice.front() });
+            intersecting.push_back({true, segmentsOnSlice.front()->second, segmentsOnSlice.front()});
         else
-            intersecting.push_back({ true, segmentsOnSlice.front()->first, segmentsOnSlice.front() });
+            intersecting.push_back({true, segmentsOnSlice.front()->first, segmentsOnSlice.front()});
         if (onSlice(segmentsOnSlice.back()->second))
-            intersecting.push_back({ true, segmentsOnSlice.back()->second, segmentsOnSlice.back() });
+            intersecting.push_back({true, segmentsOnSlice.back()->second, segmentsOnSlice.back()});
         else
-            intersecting.push_back({ true, segmentsOnSlice.back()->first, segmentsOnSlice.back() });
+            intersecting.push_back({true, segmentsOnSlice.back()->first, segmentsOnSlice.back()});
         set_intersecting.insert(segmentsOnSlice.front());
         set_intersecting.insert(segmentsOnSlice.back());
         break;
@@ -181,7 +181,7 @@ void addSegment(const LineSegment2D &segment, vector<LineSegment2D> &new_polygon
     }
 }
 
-DividingSegment &SliceData::buildNewSegment(const DividingSegment &first, const Direction direction, vector<LineSegment2D> &new_polygon, const DividingSegment& initial)
+DividingSegment &SliceData::buildNewSegment(const DividingSegment &first, const Direction direction, vector<LineSegment2D> &new_polygon, const DividingSegment &initial)
 {
     addSegment({first.intersection_point,
                 direction == Direction::CLOCKWISE ? first.line->second : first.line->first,
@@ -215,7 +215,7 @@ DividingSegment &SliceData::buildNewSegment(const DividingSegment &first, const 
     return s2;
 }
 
-void eraseFromPolygonset(const std::vector<LineSegment2D>* poly, set<const vector<LineSegment2D>*> & nonIntersectingPolygons)
+void eraseFromPolygonset(const std::vector<LineSegment2D> *poly, set<const vector<LineSegment2D> *> &nonIntersectingPolygons)
 {
     auto it = nonIntersectingPolygons.find(poly);
     if (it != nonIntersectingPolygons.end())
@@ -275,7 +275,7 @@ vector<vector<LineSegment2D>> SliceData::segmentPolygons()
                 // assert(!assigned[index]);
                 assigned[index] = true;
             }
-            // This check isn't necessary until test case 4, which is unusual. 
+            // This check isn't necessary until test case 4, which is unusual.
             if (new_polygon.size() > 2)
                 new_polygon_list.push_back(new_polygon);
         }

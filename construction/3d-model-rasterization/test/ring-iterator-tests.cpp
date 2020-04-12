@@ -91,7 +91,7 @@ TEST(RingIteratorTests, ForwardBackward1)
         left_value = (left_value + (int)number_list.size() - 1) % (int)number_list.size();
         right_value = (right_value + 1) % number_list.size();
     }
-    EXPECT_EQ(left_value, 0); // we should end at the start
+    EXPECT_EQ(left_value, 0);  // we should end at the start
     EXPECT_EQ(right_value, 0); // we should end at the start
 }
 
@@ -116,6 +116,6 @@ TEST(RingIteratorTests, ConstForwardBackward1)
         left_value = (left_value + (int)number_list.size() - 1) % (int)number_list.size();
         right_value = (right_value + 1) % number_list.size();
     }
-    EXPECT_EQ(left_value, start_value); // we should end at the start
+    EXPECT_EQ(left_value, start_value);  // we should end at the start
     EXPECT_EQ(right_value, start_value); // we should end at the start
 }

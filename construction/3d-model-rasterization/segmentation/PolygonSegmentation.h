@@ -17,7 +17,7 @@ struct DividingSegment
                   // allows for a line segment to begin or end on a dividing slice, which allows
                   // two dividing segments in a row to be even or odd.
     Point2D intersection_point;
-    const LineSegment2D* line;
+    const LineSegment2D *line;
 
     bool spansSlice() const
     {
@@ -50,7 +50,7 @@ private:
     std::vector<DividingSegment> intersecting;
 
 private:
-    void handleSegmentsOnSlice(std::vector<const LineSegment2D*> &segmentsOnSlice);
+    void handleSegmentsOnSlice(std::vector<const LineSegment2D *> &segmentsOnSlice);
 
     template <class I>
     I getIterator(const LineSegment2D *segment)
@@ -66,7 +66,7 @@ private:
         throw std::runtime_error("Logic error -- no polygon found containing segment");
     }
 
-    bool onSlice(const Point2D& p) const
+    bool onSlice(const Point2D &p) const
     {
         if (horizontal_slice)
         {
@@ -178,5 +178,5 @@ private:
         throw std::runtime_error("Logic error -- cannot locate polygon owning line segment");
     }
 
-    DividingSegment &buildNewSegment(const DividingSegment &first, const Direction direction, std::vector<LineSegment2D> &new_polygon, const DividingSegment& initial);
+    DividingSegment &buildNewSegment(const DividingSegment &first, const Direction direction, std::vector<LineSegment2D> &new_polygon, const DividingSegment &initial);
 };

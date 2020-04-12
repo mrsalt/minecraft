@@ -537,7 +537,7 @@ Polygon 122 containing 3 segments
 Polygon 123 containing 3 segments
 )delimiter";
 
-const char* test_4_step_0 = R"delimiter(
+const char *test_4_step_0 = R"delimiter(
 Polygon 0 containing 6 segments:
   0: (x: -3.000, y: -3.000)-(x: -3.000, y: 0.000)
   1: (x: -3.000, y: 0.000)-(x: -3.000, y: 3.000)
@@ -547,7 +547,7 @@ Polygon 0 containing 6 segments:
   5: (x: 3.000, y: -3.000)-(x: -3.000, y: -3.000)
 )delimiter";
 
-const char* test_4_step_1 = R"delimiter(
+const char *test_4_step_1 = R"delimiter(
 Polygon 0 containing 4 segments:
   0: (x: -3.000, y: 0.000)-(x: -3.000, y: -3.000)
   1: (x: -3.000, y: -3.000)-(x: 3.000, y: -3.000)
@@ -561,7 +561,7 @@ Polygon 1 containing 4 segments:
   3: (x: -3.000, y: 3.000)-(x: -3.000, y: 0.000)
 )delimiter";
 
-const char* test_5_step_0 = R"delimiter(
+const char *test_5_step_0 = R"delimiter(
 Polygon 0 containing 8 segments:
   0: (x: 0.000, y: 100.000)-(x: 0.000, y: 200.000)
   1: (x: 0.000, y: 200.000)-(x: 100.000, y: 200.000)
@@ -573,8 +573,8 @@ Polygon 0 containing 8 segments:
   7: (x: 75.000, y: 100.000)-(x: 0.000, y: 100.000)
 )delimiter";
 
-const char* test_5_step_1 = R"delimiter(
+const char *test_5_step_1 = R"delimiter(
 )delimiter";
 
-const char* test_5_step_2 = R"delimiter(
+const char *test_5_step_2 = R"delimiter(
 )delimiter";
