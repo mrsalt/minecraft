@@ -66,15 +66,22 @@ ostream &operator<<(ostream &out, const LineSegment2D &ls)
 
 // Returns 1 if the lines intersect, otherwise 0. In addition, if the lines
 // intersect the intersection point may be stored in the floats i_x and i_y.
-bool get_line_intersection(const LineSegment2D &a, const LineSegment2D &b, Point2D &intersection)
+bool get_line_intersection(const LineSegment2D &a, const LineSegment2D &b, Point2D &intersection, bool &online)
 {
     double s1_x = a.second.x - a.first.x;
     double s1_y = a.second.y - a.first.y;
     double s2_x = b.second.x - b.first.x;
     double s2_y = b.second.y - b.first.y;
 
-    double s = (-s1_y * (a.first.x - b.first.x) + s1_x * (a.first.y - b.first.y)) / (-s2_x * s1_y + s1_x * s2_y);
-    double t = (s2_x * (a.first.y - b.first.y) - s2_y * (a.first.x - b.first.x)) / (-s2_x * s1_y + s1_x * s2_y);
+    double divisor = (-s2_x * s1_y + s1_x * s2_y);
+    if (divisor == 0)
+    {
+        online = true;
+        return true;
+    }
+
+    double s = (-s1_y * (a.first.x - b.first.x) + s1_x * (a.first.y - b.first.y)) / divisor;
+    double t =  (s2_x * (a.first.y - b.first.y) - s2_y * (a.first.x - b.first.x)) / divisor;
 
     if (s >= 0 && s <= 1 && t >= 0 && t <= 1)
     {
@@ -87,9 +94,9 @@ bool get_line_intersection(const LineSegment2D &a, const LineSegment2D &b, Point
     return false; // No collision
 }
 
-bool LineSegment2D::intersects(const LineSegment2D &segment, Point2D &intersection) const
+bool LineSegment2D::intersects(const LineSegment2D &segment, Point2D &intersection, bool &online) const
 {
     if (!bounds.overlaps(segment.bounds))
         return false;
-    return get_line_intersection(*this, segment, intersection);
+    return get_line_intersection(*this, segment, intersection, online);
 }

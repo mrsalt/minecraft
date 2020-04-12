@@ -12,6 +12,29 @@ static Rectangle getBounds(const vector<LineSegment2D> polygon)
     return bounds;
 }
 
+size_t determineStartingSegment(const vector<LineSegment2D>& shape, const LineSegment2D & slice)
+{
+    size_t nextBest = 0;
+    for (size_t i = 0; i < shape.size(); i++)
+    {
+        auto& segment = shape[i];
+        Point2D intersection;
+        bool online;
+        if (segment.intersects(slice, intersection, online))
+        {
+            if (segment.first != intersection && segment.second != intersection)
+            {
+                nextBest = i;
+            }
+        }
+        else
+        {
+            return i;
+        }
+    }
+    return nextBest;
+}
+
 SliceData::SliceData(const LineSegment2D &slice, const vector<vector<LineSegment2D>> &polygons)
     : polygons{polygons}, slice{slice}, horizontal_slice{slice.first.y == slice.second.y}, vertical_slice{slice.first.x == slice.second.x}
 {
@@ -24,11 +47,13 @@ SliceData::SliceData(const LineSegment2D &slice, const vector<vector<LineSegment
     for (auto &shape : polygons)
     {
         vector<const LineSegment2D*> segmentsOnSlice;
-
-        for (auto &segment : shape)
+        size_t startAt = determineStartingSegment(shape, slice);
+        for (size_t i = 0; i < shape.size(); i++)
         {
+            auto& segment = shape[(startAt + i) % shape.size()];
             Point2D intersection;
-            if (segment.intersects(slice, intersection))
+            bool online = false;
+            if (segment.intersects(slice, intersection, online))
             {
                 if (segment.first == intersection || segment.second == intersection)
                 {
@@ -47,6 +72,8 @@ SliceData::SliceData(const LineSegment2D &slice, const vector<vector<LineSegment
                 handleSegmentsOnSlice(segmentsOnSlice);
             }
         }
+        if (!segmentsOnSlice.empty())
+            handleSegmentsOnSlice(segmentsOnSlice);
     }
 
     //if (intersecting.size() % 2 != 0)
@@ -128,13 +155,16 @@ void SliceData::handleSegmentsOnSlice(vector<const LineSegment2D*> &segmentsOnSl
             if (isLeftOfSlice(segmentsOnSlice.front()->second) == isLeftOfSlice(segmentsOnSlice.back()->first))
                 break;
         }
-        Point2D intersection = compareFirstToSecond ? segmentsOnSlice.front()->second : segmentsOnSlice.front()->first;
-
-        intersecting.push_back({ true, intersection, segmentsOnSlice.front() });
+        if (compareFirstToSecond) // means that second has been tested and it IS on the slice
+            intersecting.push_back({ true, segmentsOnSlice.front()->second, segmentsOnSlice.front() });
+        else
+            intersecting.push_back({ true, segmentsOnSlice.front()->first, segmentsOnSlice.front() });
+        if (onSlice(segmentsOnSlice.back()->second))
+            intersecting.push_back({ true, segmentsOnSlice.back()->second, segmentsOnSlice.back() });
+        else
+            intersecting.push_back({ true, segmentsOnSlice.back()->first, segmentsOnSlice.back() });
         set_intersecting.insert(segmentsOnSlice.front());
-        intersecting.push_back({ true, intersection, segmentsOnSlice.back() });
         set_intersecting.insert(segmentsOnSlice.back());
-
         break;
     }
     segmentsOnSlice.clear();

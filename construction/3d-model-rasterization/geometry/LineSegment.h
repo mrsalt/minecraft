@@ -31,7 +31,7 @@ struct LineSegment2D
     Rectangle bounds;
     SurfaceInfo *surface;
 
-    bool intersects(const LineSegment2D &segment, Point2D &intersection) const;
+    bool intersects(const LineSegment2D &segment, Point2D &intersection, bool& online) const;
 
     bool operator<(const LineSegment2D &rhs) const
     {
