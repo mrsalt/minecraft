@@ -103,11 +103,11 @@ TEST(PolygonSegmentation, Test1)
     ASSERT_EQ(polygonsToString(polygons), test_1_step_0);
 
     slicePolygons(slice1, polygons);
-    drawPolygonsToFile("Test1-1.svg", polygons);
+    drawPolygonsToFile("Test1-1.svg", polygons, &slice1);
     ASSERT_EQ(polygonsToString(polygons), test_1_step_1);
 
     slicePolygons(slice2, polygons);
-    drawPolygonsToFile("Test1-2.svg", polygons);
+    drawPolygonsToFile("Test1-2.svg", polygons, &slice2);
     ASSERT_EQ(polygonsToString(polygons), test_1_step_2);
 }
 
@@ -123,11 +123,11 @@ TEST(PolygonSegmentation, Test2)
     ASSERT_EQ(polygonsToString(polygons), test_2_step_0);
 
     slicePolygons(slice1, polygons);
-    drawPolygonsToFile("Test2-1.svg", polygons);
+    drawPolygonsToFile("Test2-1.svg", polygons, &slice1);
     ASSERT_EQ(polygonsToString(polygons), test_2_step_1);
 
     slicePolygons(slice2, polygons);
-    drawPolygonsToFile("Test2-2.svg", polygons);
+    drawPolygonsToFile("Test2-2.svg", polygons, &slice2);
     ASSERT_EQ(polygonsToString(polygons), test_2_step_2);
 }
 TEST(PolygonSegmentation, Test3)
@@ -142,7 +142,7 @@ TEST(PolygonSegmentation, Test3)
     {
         LineSegment2D slice1{{0, y}, {900, y}};
         slicePolygons(slice1, polygons);
-        drawPolygonsToFile(format("Test3-y-%d.svg", (int)y).c_str(), polygons);
+        drawPolygonsToFile(format("Test3-y-%d.svg", (int)y).c_str(), polygons, &slice1);
         //cout << "After slice " << slice1 << endl;
         //printPolygonBounds(polygons);
         //cout << endl;
@@ -153,7 +153,7 @@ TEST(PolygonSegmentation, Test3)
     {
         LineSegment2D slice1{{x, 0}, {x, 800}};
         slicePolygons(slice1, polygons);
-        drawPolygonsToFile(format("Test3-x-%d.svg", (int)x).c_str(), polygons);
+        drawPolygonsToFile(format("Test3-x-%d.svg", (int)x).c_str(), polygons, &slice1);
         //cout << "After slice " << slice1 << endl;
         //printPolygonBounds(polygons);
         //cout << endl;
@@ -172,11 +172,11 @@ TEST(PolygonSegmentation, Test4)
     ASSERT_EQ(polygonsToString(polygons), test_4_step_0);
 
     slicePolygons(slice1, polygons);
-    drawPolygonsToFile("Test4-1.svg", polygons);
+    drawPolygonsToFile("Test4-1.svg", polygons, &slice1);
     ASSERT_EQ(polygonsToString(polygons), test_4_step_1);
 
     slicePolygons(slice1, polygons);
-    drawPolygonsToFile("Test4-2.svg", polygons);
+    drawPolygonsToFile("Test4-2.svg", polygons, &slice1);
     ASSERT_EQ(polygonsToString(polygons), test_4_step_1); // expecting no change from prior step
 }
 
@@ -194,11 +194,11 @@ TEST(PolygonSegmentation, Test5)
     ASSERT_EQ(polygonsToString(polygons), test_5_step_0);
 
     slicePolygons(slice1, polygons);
-    drawPolygonsToFile("Test5-1.svg", polygons);
+    drawPolygonsToFile("Test5-1.svg", polygons, &slice1);
     ASSERT_EQ(polygonsToString(polygons), test_5_step_1);
 
     slicePolygons(slice2, polygons);
-    drawPolygonsToFile("Test5-2.svg", polygons);
+    drawPolygonsToFile("Test5-2.svg", polygons, &slice2);
     ASSERT_EQ(polygonsToString(polygons), test_5_step_2);
 }
 */

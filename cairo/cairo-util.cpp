@@ -3,6 +3,8 @@
 #include <cairo.h>
 #include <cairo-svg.h>
 
+#define M_PI 3.14159265358979323846
+
 using namespace std;
 
 Rectangle getBounds(const vector<LineSegment2D> polygon)
@@ -78,9 +80,16 @@ void draw_polygon(const vector<LineSegment2D> &polygon, cairo_t *cr, double scal
         cairo_line_to(cr, scale * (segment.second.x - rect.min.x + padding), scale * (segment.second.y - rect.min.y + padding));
     }
     cairo_stroke(cr);
+    for (const auto& segment : polygon)
+    {
+        cairo_new_sub_path(cr);
+        cairo_arc(cr, scale * (segment.first.x - rect.min.x + padding), scale * (segment.first.y - rect.min.y + padding), 2.0, 0., 2 * M_PI);
+        cairo_stroke_preserve(cr);
+        cairo_fill(cr);
+    }
 }
 
-void drawPolygonsToFile(string filename, const vector<vector<LineSegment2D>> &polygons)
+void drawPolygonsToFile(string filename, const vector<vector<LineSegment2D>> &polygons, LineSegment2D* slice)
 {
     cairo_surface_t *surface;
     cairo_t *cr;
@@ -117,6 +126,15 @@ void drawPolygonsToFile(string filename, const vector<vector<LineSegment2D>> &po
         set_color_based_on_polygon(cr, polygon, count++);
         draw_polygon(shrink_polygon(polygon, shrink / scale), cr, scale, rect, padding);
     }
+
+    if (slice)
+    {
+        cairo_set_source_rgba(cr, 0, 0, 0, 0.5);
+        cairo_move_to(cr, scale * (slice->first.x - rect.min.x + padding), scale * (slice->first.y - rect.min.y + padding));
+        cairo_line_to(cr, scale * (slice->second.x - rect.min.x + padding), scale * (slice->second.y - rect.min.y + padding));
+        cairo_stroke(cr);
+    }
+
     cairo_destroy(cr);
     cairo_surface_destroy(surface);
 }

@@ -40,4 +40,5 @@ endif (POLICY CMP0077)
 set(INSTALL_GTEST OFF)
 add_subdirectory(../googletest ${CMAKE_BINARY_DIR}/googletest)
 
+add_subdirectory(cairo)
 add_subdirectory(construction)
