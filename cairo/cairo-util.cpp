@@ -7,6 +7,11 @@
 
 using namespace std;
 
+const double line_width = 1.0;
+const double dot_radius = 0.75;
+const double desiredSize = 600.0;
+const double shrink = 1.0;
+
 Rectangle getBounds(const vector<LineSegment2D> polygon)
 {
     Rectangle bounds = polygon.front().bounds;
@@ -83,7 +88,7 @@ void draw_polygon(const vector<LineSegment2D> &polygon, cairo_t *cr, double scal
     for (const auto& segment : polygon)
     {
         cairo_new_sub_path(cr);
-        cairo_arc(cr, scale * (segment.first.x - rect.min.x + padding), scale * (segment.first.y - rect.min.y + padding), 2.0, 0., 2 * M_PI);
+        cairo_arc(cr, scale * (segment.first.x - rect.min.x + padding), scale * (segment.first.y - rect.min.y + padding), dot_radius, 0., 2 * M_PI);
         cairo_stroke_preserve(cr);
         cairo_fill(cr);
     }
@@ -98,8 +103,6 @@ void drawPolygonsToFile(string filename, const vector<vector<LineSegment2D>> &po
     double yExtent = rect.max.y - rect.min.y;
     double padding;
     double scale;
-    const double desiredSize = 600.0;
-    const double shrink = 2.0;
 
     if (xExtent > yExtent)
     {
@@ -118,7 +121,7 @@ void drawPolygonsToFile(string filename, const vector<vector<LineSegment2D>> &po
     cairo_svg_surface_set_document_unit(surface, CAIRO_SVG_UNIT_PX);
 
     cr = cairo_create(surface);
-    cairo_set_line_width(cr, 2);
+    cairo_set_line_width(cr, line_width);
 
     uint32_t count = 0;
     for (auto &polygon : polygons)

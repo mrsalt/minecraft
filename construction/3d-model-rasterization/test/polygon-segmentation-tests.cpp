@@ -19,6 +19,10 @@ extern const char *test_4_step_1;
 extern const char *test_5_step_0;
 extern const char *test_5_step_1;
 extern const char *test_5_step_2;
+extern const char* test_6_step_0;
+extern const char* test_6_step_1;
+extern const char* test_7_step_0;
+extern const char* test_7_step_1;
 
 vector<LineSegment2D> makePolygonFromPoints(const vector<Point2D> points)
 {
@@ -202,3 +206,35 @@ TEST(PolygonSegmentation, Test5)
     ASSERT_EQ(polygonsToString(polygons), test_5_step_2);
 }
 */
+
+TEST(PolygonSegmentation, Test6)
+{
+    vector<vector<LineSegment2D>> polygons;
+    polygons.push_back(makePolygonFromPoints({ {83, 97}, { 132,20 }, { 185,94 }, { 133,156 } }));
+    polygons.push_back(makePolygonFromPoints({ {42, 182}, { 68,139 }, { 103,181 }, { 75,223 } }));
+    polygons.push_back(makePolygonFromPoints({ {164, 189}, { 191,143 }, { 227,187 }, { 199,228 } }));
+    LineSegment2D slice1{ {0, 147}, {250, 147} };
+
+    drawPolygonsToFile("Test6-0.svg", polygons);
+    ASSERT_EQ(polygonsToString(polygons), test_6_step_0);
+
+    slicePolygons(slice1, polygons);
+    drawPolygonsToFile("Test6-1.svg", polygons, &slice1);
+    ASSERT_EQ(polygonsToString(polygons), test_6_step_1);
+}
+
+TEST(PolygonSegmentation, Test7)
+{
+    vector<vector<LineSegment2D>> polygons;
+    polygons.push_back(makePolygonFromPoints({ {118,172},  {74, 114}, { 132,20 }, { 194, 108 }, {149,172},  { 133,156 } }));
+    polygons.push_back(makePolygonFromPoints({ {42, 182}, { 68,139 }, { 103,181 }, { 75,223 } }));
+    polygons.push_back(makePolygonFromPoints({ {164, 189}, { 191,143 }, { 227,187 }, { 199,228 } }));
+    LineSegment2D slice1{ {0, 163}, {250, 163} };
+
+    drawPolygonsToFile("Test7-0.svg", polygons);
+    ASSERT_EQ(polygonsToString(polygons), test_7_step_0);
+
+    slicePolygons(slice1, polygons);
+    drawPolygonsToFile("Test7-1.svg", polygons, &slice1);
+    ASSERT_EQ(polygonsToString(polygons), test_7_step_1);
+}
