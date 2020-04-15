@@ -51,6 +51,8 @@ public:
 
     virtual void setCurrentColor(const Color &c)
     {
+        if (currentSurfaceInfo && currentSurfaceInfo->getRGB() == c)
+            return;
         SolidColorSurface *s = new SolidColorSurface(c);
         currentSurfaceInfo = s;
         surfaceInfos.push_back(s);

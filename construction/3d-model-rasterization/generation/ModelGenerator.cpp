@@ -4,6 +4,7 @@
 #include "ModelWriter_Wavefront.h"
 #include "PolygonSegmentation.h"
 #include "string_format.h"
+#include "cairo-util.h"
 
 #include <assert.h>
 #include <map>
@@ -52,6 +53,40 @@ ModelGenerator::ModelGenerator(const ModelBuilder &source, double model_height)
 {
 }
 
+// Give a list of groups of 3D line segments (polygons) that intersect a plane, determine
+// where those line segments intersect with the plane.  Basically convert these 3D line segments
+// (edges of 3D polygons) to the points these edges cross a plane and assemble these points
+// into 2D line segments (polygons).
+template <typename TMember>
+vector<vector<LineSegment2D>> intersectSurfacesWithPlane(vector<vector<LineSegment>> &shapes_by_lines, double &p, TMember &member, TMember &_2D_xaxis, TMember &_2D_yaxis)
+{
+    vector<vector<LineSegment2D>> shapes_2D;
+    for (auto &list : shapes_by_lines)
+    {
+        vector<LineSegment2D> points_in_shape;
+        assert(list.size() > 2);
+        const LineSegment &last = list.back();
+
+        Point pPlane = projectLineOntoPlane(*last.first, *last.second, p, member);
+        // initialize the first 'previousPoint' to be the ending point.
+        Point2D previousPoint{pPlane.*_2D_xaxis, pPlane.*_2D_yaxis};
+
+        //print(cout, list, source);
+        for (const auto &line : list)
+        {
+            pPlane = projectLineOntoPlane(*line.first, *line.second, p, member);
+            assert(abs(pPlane.*member - p) < 0.000001);
+            Point2D point{pPlane.*_2D_xaxis, pPlane.*_2D_yaxis};
+            LineSegment2D segment(previousPoint, point, line.surfaceInfo);
+            points_in_shape.push_back(segment);
+            previousPoint = point;
+        }
+        assert(points_in_shape.size() > 2);
+        shapes_2D.push_back(points_in_shape);
+    }
+    return shapes_2D;
+}
+
 template <typename TMember>
 void ModelGenerator::slicePolygonsAlongAxis(
     vector<PolygonBounds> &polyBounds,
@@ -60,12 +95,13 @@ void ModelGenerator::slicePolygonsAlongAxis(
     TMember _2D_xaxis,
     TMember _2D_yaxis,
     PolygonComparisonMethod polyOrderingMethod,
-    PointComparisonMethod pointOrderingMethod)
+    PointComparisonMethod pointOrderingMethod,
+    const Color &color)
 {
     std::sort(polyBounds.begin(), polyBounds.end(), polyOrderingMethod);
 
-    cout << "For axis " << (member == &Point::x ? "x" : member == &Point::y ? "y" : member == &Point::z ? "z" : "?")
-         << " there are " << layerCount << " layers to generate." << endl;
+    const char *axisTitle = (member == &Point::x ? "x" : member == &Point::y ? "y" : member == &Point::z ? "z" : "?");
+    cout << "For axis " << axisTitle << " there are " << layerCount << " layers to generate." << endl;
 
     set<const PolygonBounds *> activePolygons;
     int nextPoly = 0;
@@ -99,65 +135,62 @@ void ModelGenerator::slicePolygonsAlongAxis(
         {
             vector<vector<LineSegment>> shapes_by_lines = placePolygonsInLayer(activePolygons, p, member, pointOrderingMethod);
             cout << "    " << shapes_by_lines.size() << " separate shapes identified (cross section areas)." << endl;
-            vector<vector<LineSegment2D>> shapes_2D;
-            for (auto &list : shapes_by_lines)
-            {
-                vector<LineSegment2D> points_in_shape;
-                vector<int> cross_model_points;
-                bool firstPoint = true;
-                Point2D previousPoint;
-                SurfaceInfo *previousSurface;
-
-                //print(cout, list, source);
-                for (const auto &line : list)
-                {
-                    Point pPlane = projectLineOntoPlane(*line.first, *line.second, p, member);
-                    assert(abs(pPlane.*member - p) < 0.000001);
-
-                    if (args.output_cross_model)
-                    {
-                        cross_model_points.push_back((int)cross_model.points.size());
-                        cross_model.verticeRead(pPlane);
-                    }
-
-                    Point2D point{pPlane.*_2D_xaxis, pPlane.*_2D_yaxis};
-                    if (firstPoint)
-                    {
-                        previousPoint = point;
-                        previousSurface = line.surfaceInfo;
-                        firstPoint = false;
-                    }
-                    else
-                    {
-                        LineSegment2D segment(previousPoint, point, previousSurface);
-                        points_in_shape.push_back(segment);
-                        previousPoint = point;
-                        previousSurface = line.surfaceInfo;
-                    }
-                }
-                shapes_2D.push_back(points_in_shape);
-
-                if (args.output_cross_model)
-                {
-                    cross_model.polygonRead(cross_model_points.data(), (int)cross_model_points.size());
-                }
-            }
+            auto shapes_2D = intersectSurfacesWithPlane(shapes_by_lines, p, member, _2D_xaxis, _2D_yaxis);
             size_t slices;
             slices = (size_t)round((stats.max.*_2D_yaxis - stats.min.*_2D_yaxis) / layerDist) + 1;
             for (size_t n = 0; n < slices; n++)
             {
                 Point2D p1{stats.min.*_2D_xaxis, stats.min.*_2D_yaxis + n * layerDist};
                 Point2D p2{stats.max.*_2D_xaxis, stats.min.*_2D_yaxis + n * layerDist};
-                slicePolygons({p1, p2}, shapes_2D);
+                LineSegment2D slice{p1, p2};
+                //drawPolygonsToFile(format("%s-slice-%03d.svg", axisTitle, (int)l), shapes_2D, &slice);
+                slicePolygons(slice, shapes_2D);
             }
             slices = (size_t)round((stats.max.*_2D_xaxis - stats.min.*_2D_xaxis) / layerDist) + 1;
             for (size_t n = 0; n < slices; n++)
             {
                 Point2D p1{stats.min.*_2D_xaxis + n * layerDist, stats.min.*_2D_yaxis};
                 Point2D p2{stats.min.*_2D_xaxis + n * layerDist, stats.max.*_2D_yaxis};
-                slicePolygons({p1, p2}, shapes_2D);
+                LineSegment2D slice{p1, p2};
+                //drawPolygonsToFile(format("%s-slice-%03d.svg", axisTitle, (int)l), shapes_2D, &slice);
+                slicePolygons(slice, shapes_2D);
+            }
+
+            if (args.output_cross_model)
+            {
+                insert_cross_model_polygons(shapes_2D, _2D_xaxis, _2D_yaxis, member, p, color);
             }
         }
+    }
+}
+
+template <typename TMember>
+void ModelGenerator::insert_cross_model_polygons(const vector<vector<LineSegment2D>> &shapes_2D, TMember &_2D_xaxis, TMember &_2D_yaxis, TMember &member, double &p, const Color &color)
+{
+    for (auto &shape : shapes_2D)
+    {
+        vector<int> cross_model_polygon;
+        for (const LineSegment2D &segment : shape)
+        {
+            Point point;
+            point.*_2D_xaxis = segment.first.x;
+            point.*_2D_yaxis = segment.first.y;
+            point.*member = p;
+            auto it = point_map.find(point);
+            int index;
+            if (it == point_map.end())
+            {
+                index = (int)cross_model.points.size();
+                point_map.insert({point, index});
+                cross_model.verticeRead(point);
+            }
+            else
+            {
+                index = it->second;
+            }
+            cross_model_polygon.push_back(index);
+        }
+        cross_model_polygons.push_back({cross_model_polygon, color});
     }
 }
 
@@ -246,6 +279,9 @@ vector<vector<LineSegment>> ModelGenerator::placePolygonsInLayer(
                         write_debug_model("debug", source, unplacedPolygons, firstPiece, placed, currentPiece, closestPiece, layerPosition);
                         throw model_error(format("Unable to find match for polygon %s", currentPiece->toString(source).c_str()));
                     }
+                    //static int file_count = 0;
+                    //set<const Polygon*> emptySet;
+                    //write_debug_model(format("debug-%.3f-%d", layerPosition, file_count++), source, emptySet, firstPiece, placed, currentPiece, closestPiece, layerPosition);
                     assert(ret.first);
                     firstMatched = true;
                     common_edge = ret.second;
@@ -256,7 +292,7 @@ vector<vector<LineSegment>> ModelGenerator::placePolygonsInLayer(
         }
         catch (const model_error &e)
         {
-            std::cerr << e.what() << '\n';
+            cerr << e.what() << '\n';
             throw e;
         }
         shapes.push_back(orderedPairs);
@@ -282,13 +318,6 @@ void ModelGenerator::generate()
         polyBounds.push_back(PolygonBounds(&polygon));
     }
 
-    Point *point_data = nullptr;
-    if (args.output_cross_model)
-    {
-        cross_model.points.reserve(1000000);
-        point_data = cross_model.points.data();
-        cross_model.setCurrentColor({255, 100, 100});
-    }
     slicePolygonsAlongAxis(
         polyBounds, (int)(stats.extent.width / layerDist),
         &Point::x,
@@ -299,9 +328,8 @@ void ModelGenerator::generate()
         },
         [](const Point &a, const Point &b) {
             return a.x < b.x;
-        });
-    if (args.output_cross_model)
-        cross_model.setCurrentColor({100, 255, 100});
+        },
+        {255, 100, 100});
     slicePolygonsAlongAxis(
         polyBounds, (int)(stats.extent.height / layerDist),
         &Point::y,
@@ -312,9 +340,8 @@ void ModelGenerator::generate()
         },
         [](const Point &a, const Point &b) {
             return a.y < b.y;
-        });
-    if (args.output_cross_model)
-        cross_model.setCurrentColor({100, 100, 255});
+        },
+        {100, 255, 100});
     slicePolygonsAlongAxis(
         polyBounds, (int)(stats.extent.depth / layerDist),
         &Point::z,
@@ -325,12 +352,16 @@ void ModelGenerator::generate()
         },
         [](const Point &a, const Point &b) {
             return a.z < b.z;
-        });
+        },
+        {100, 100, 255});
+
     if (args.output_cross_model)
     {
-        if (point_data != cross_model.points.data())
-            // TODO: reimplement ModelBuilder so that points can be re-allocated while polygons are being added.
-            throw runtime_error("Data for vertices has been re-allocated.  Cannot write cross model.");
+        for (auto &poly : cross_model_polygons)
+        {
+            cross_model.setCurrentColor(poly.second);
+            cross_model.polygonRead(poly.first.data(), (int)poly.first.size());
+        }
         ModelWriter_Wavefront writer(args.output_directory, "cross-model");
         writer.write(cross_model);
     }

@@ -8,6 +8,7 @@ include_directories(
     model-writers
     segmentation
     utils
+    ${CMAKE_SOURCE_DIR}/cairo
 )
 
 set (SRCS
@@ -46,7 +47,7 @@ add_executable(rasterize-3d
     main.cpp
 )
 
-target_link_libraries(rasterize-3d rasterize-lib)
+target_link_libraries(rasterize-3d rasterize-lib cairo-util)
 
 set_target_properties(rasterize-3d rasterize-lib
     PROPERTIES
