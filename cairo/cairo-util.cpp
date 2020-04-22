@@ -2,17 +2,17 @@
 #include "Rectangle.h"
 #include <cairo.h>
 #include <cairo-svg.h>
-
-#define M_PI 3.14159265358979323846
+#define _USE_MATH_DEFINES
+#include <math.h>
 
 using namespace std;
 
 const double line_width = 1.0;
 const double dot_radius = 0.75;
 const double desiredSize = 600.0;
-const double shrink = 1.0;
+const double shrink = 0.0;
 
-Rectangle getBounds(const vector<LineSegment2D> polygon)
+Rectangle getBounds(const vector<LineSegment2D> &polygon)
 {
     Rectangle bounds = polygon.front().bounds;
     for (const auto &segment : polygon)
@@ -22,12 +22,14 @@ Rectangle getBounds(const vector<LineSegment2D> polygon)
     return bounds;
 }
 
-Rectangle getBounds(const vector<vector<LineSegment2D>> &polygons)
+typedef const vector<LineSegment2D> *(*GetNextPolygonCallback)(void *ctx);
+Rectangle getBounds(GetNextPolygonCallback callback, void *ctx)
 {
-    Rectangle bounds = getBounds(polygons.front());
-    for (auto &polygon : polygons)
+    auto poly = callback(ctx);
+    Rectangle bounds = getBounds(*poly);
+    while (poly = callback(ctx))
     {
-        bounds += getBounds(polygon);
+        bounds += getBounds(*poly);
     }
     return bounds;
 }
@@ -62,6 +64,8 @@ Point2D shrink_point(const Point2D &p, const Point2D &center, double half_width,
 
 vector<LineSegment2D> shrink_polygon(const vector<LineSegment2D> &polygon, const double max_shrink)
 {
+    if (!max_shrink)
+        return polygon;
     Rectangle bounds = getBounds(polygon);
     Point2D center = {(bounds.min.x + bounds.max.x) / 2., (bounds.min.y + bounds.max.y) / 2.};
     vector<LineSegment2D> ret;
@@ -76,29 +80,36 @@ vector<LineSegment2D> shrink_polygon(const vector<LineSegment2D> &polygon, const
     return ret;
 }
 
+void draw_dot(cairo_t *cr, double scale, const Point2D &p, Rectangle &rect, double padding)
+{
+    cairo_new_sub_path(cr);
+    cairo_arc(cr, scale * (p.x - rect.min.x + padding), scale * (p.y - rect.min.y + padding), dot_radius, 0., 2 * M_PI);
+    cairo_stroke_preserve(cr);
+    cairo_fill(cr);
+}
+
 void draw_polygon(const vector<LineSegment2D> &polygon, cairo_t *cr, double scale, Rectangle &rect, double padding)
 {
-    const auto &first = polygon.front().first;
-    cairo_move_to(cr, scale * (first.x - rect.min.x + padding), scale * (first.y - rect.min.y + padding));
     for (const auto &segment : polygon)
     {
+        cairo_move_to(cr, scale * (segment.first.x - rect.min.x + padding), scale * (segment.first.y - rect.min.y + padding));
         cairo_line_to(cr, scale * (segment.second.x - rect.min.x + padding), scale * (segment.second.y - rect.min.y + padding));
     }
     cairo_stroke(cr);
-    for (const auto& segment : polygon)
+    for (size_t i = 0; i < polygon.size(); i++)
     {
-        cairo_new_sub_path(cr);
-        cairo_arc(cr, scale * (segment.first.x - rect.min.x + padding), scale * (segment.first.y - rect.min.y + padding), dot_radius, 0., 2 * M_PI);
-        cairo_stroke_preserve(cr);
-        cairo_fill(cr);
+        const auto &segment = polygon[i];
+        draw_dot(cr, scale, segment.first, rect, padding);
+        if (!segment.second.isReallyCloseTo(polygon[(i == polygon.size() - 1) ? 0 : i + 1].first))
+            draw_dot(cr, scale, segment.second, rect, padding);
     }
 }
 
-void drawPolygonsToFile(string filename, const vector<vector<LineSegment2D>> &polygons, LineSegment2D* slice)
+void drawPolygonsToFileHelper(string filename, GetNextPolygonCallback callback, void *ctx, const LineSegment2D *slice)
 {
     cairo_surface_t *surface;
     cairo_t *cr;
-    Rectangle rect = getBounds(polygons);
+    Rectangle rect = getBounds(callback, ctx);
     double xExtent = rect.max.x - rect.min.x;
     double yExtent = rect.max.y - rect.min.y;
     double padding;
@@ -124,10 +135,10 @@ void drawPolygonsToFile(string filename, const vector<vector<LineSegment2D>> &po
     cairo_set_line_width(cr, line_width);
 
     uint32_t count = 0;
-    for (auto &polygon : polygons)
+    while (auto poly = callback(ctx))
     {
-        set_color_based_on_polygon(cr, polygon, count++);
-        draw_polygon(shrink_polygon(polygon, shrink / scale), cr, scale, rect, padding);
+        set_color_based_on_polygon(cr, *poly, count++);
+        draw_polygon(shrink_polygon(*poly, shrink / scale), cr, scale, rect, padding);
     }
 
     if (slice)
@@ -140,4 +151,39 @@ void drawPolygonsToFile(string filename, const vector<vector<LineSegment2D>> &po
 
     cairo_destroy(cr);
     cairo_surface_destroy(surface);
+}
+
+const vector<LineSegment2D> *GetNextPoly(void *ctx)
+{
+    auto &p = *reinterpret_cast<pair<int, const vector<vector<LineSegment2D>> *> *>(ctx);
+    if (p.first == p.second->size())
+    {
+        p.first = 0;
+        return nullptr;
+    }
+    return &p.second->at(p.first++);
+}
+
+void drawPolygonsToFile(string filename, const vector<vector<LineSegment2D>> &polygons, const LineSegment2D *slice)
+{
+    pair<int, const vector<vector<LineSegment2D>> *> ctx{0, &polygons};
+    drawPolygonsToFileHelper(filename, GetNextPoly, &ctx, slice);
+}
+
+const vector<LineSegment2D> *GetNextPolySingle(void *ctx)
+{
+    auto &p = *reinterpret_cast<pair<int, const vector<LineSegment2D> *> *>(ctx);
+    if (p.first == 1)
+    {
+        p.first = 0;
+        return nullptr;
+    }
+    p.first++;
+    return p.second;
+}
+
+void drawPolygonToFile(string filename, const vector<LineSegment2D> &polygon, const LineSegment2D *slice)
+{
+    pair<int, const vector<LineSegment2D> *> ctx{0, &polygon};
+    drawPolygonsToFileHelper(filename, GetNextPolySingle, &ctx, slice);
 }

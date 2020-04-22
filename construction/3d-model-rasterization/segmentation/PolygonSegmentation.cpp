@@ -35,15 +35,15 @@ size_t determineStartingSegment(const vector<LineSegment2D> &shape, const LineSe
     return nextBest;
 }
 
-bool segmentsAreContiguous(const vector<vector<LineSegment2D>>& polygons)
+bool segmentsAreContiguous(const vector<vector<LineSegment2D>> &polygons)
 {
     for (size_t i = 0; i < polygons.size(); i++)
     {
-        auto& shape = polygons[i];
+        auto &shape = polygons[i];
         Point2D previous = shape.back().second;
         for (size_t j = 0; j < shape.size(); j++)
         {
-            auto& segment = shape[j];
+            auto &segment = shape[j];
             bool isReallyCloseToPrevious = segment.first.isReallyCloseTo(previous);
             assert(isReallyCloseToPrevious);
             if (!isReallyCloseToPrevious)
@@ -55,7 +55,7 @@ bool segmentsAreContiguous(const vector<vector<LineSegment2D>>& polygons)
 }
 
 SliceData::SliceData(const LineSegment2D &slice, const vector<vector<LineSegment2D>> &polygons)
-    : polygons{polygons}, slice{slice}, horizontal_slice{slice.first.y == slice.second.y}, vertical_slice{slice.first.x == slice.second.x}
+    : PolygonMath(polygons), slice{slice}, horizontal_slice{slice.first.y == slice.second.y}, vertical_slice{slice.first.x == slice.second.x}
 {
     // in the future if necessary slice could be at any angle.  just have to use vector math
     // to determine if a point is left or right of the line.
@@ -312,7 +312,7 @@ void slicePolygons(const LineSegment2D &slice, vector<vector<LineSegment2D>> &po
 {
     SliceData segmenter(slice, polygons);
 
-    if (segmenter.intersections().empty())
+    if (!segmenter.polygonsAreIntersectedBySlice())
         return; // nothing to do
 
     polygons = segmenter.segmentPolygons();

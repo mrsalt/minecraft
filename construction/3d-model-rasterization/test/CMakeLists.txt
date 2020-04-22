@@ -6,9 +6,13 @@ include_directories(
 
 add_executable(test-rasterize-lib
     main.cpp
+    polygon-expectations.h
     polygon-expectations.cpp
+    polygon-math-tests.cpp
     polygon-segmentation-tests.cpp
     ring-iterator-tests.cpp
+    static-polygons.h
+    static-polygons.cpp
 )
 
 target_link_libraries(test-rasterize-lib gtest rasterize-lib cairo-util)

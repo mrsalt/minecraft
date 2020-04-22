@@ -32,7 +32,12 @@ set (SRCS
     geometry/Surface.h
     model-readers/ModelReader_Wavefront.cpp
     model-writers/ModelWriter_Wavefront.cpp
+    segmentation/PolygonMath.h
+    segmentation/PolygonMath.cpp
+    segmentation/PolygonSegmentation.h
     segmentation/PolygonSegmentation.cpp
+    segmentation/PolygonUnion.h
+    segmentation/PolygonUnion.cpp
 )
 
 if (MSVC)
