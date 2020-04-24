@@ -16,3 +16,4 @@ extern const char* test_6_step_0;
 extern const char* test_6_step_1;
 extern const char* test_7_step_0;
 extern const char* test_7_step_1;
+extern const char* union_test_1;

@@ -2,6 +2,8 @@
 
 #include "PolygonMath.h"
 
+void combinePolygons(std::vector<std::vector<LineSegment2D>> &polygons);
+
 class PolygonUnion : protected PolygonMath
 {
 public:
@@ -9,8 +11,9 @@ public:
 
     bool polygonsAreIntersecting() { return !intersections().empty(); }
 
-    std::vector<std::vector<LineSegment2D>> combinePolygons();
+    std::vector<LineSegment2D> combinePolygons();
+
+    bool findIntersectingSegments(const std::vector<LineSegment2D> &a, const std::vector<LineSegment2D> &b);
 
 private:
-    void findIntersectingSegments(const std::vector<LineSegment2D>& a, const std::vector<LineSegment2D>& b);
 };

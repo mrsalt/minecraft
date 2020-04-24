@@ -10,6 +10,7 @@ add_executable(test-rasterize-lib
     polygon-expectations.cpp
     polygon-math-tests.cpp
     polygon-segmentation-tests.cpp
+    polygon-union-tests.cpp
     ring-iterator-tests.cpp
     static-polygons.h
     static-polygons.cpp

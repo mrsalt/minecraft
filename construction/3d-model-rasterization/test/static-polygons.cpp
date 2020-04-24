@@ -14,6 +14,9 @@ const vector<LineSegment2D> test_6_polygon_2 = makePolygonFromPoints({{42, 182},
 const vector<LineSegment2D> test_6_polygon_3 = makePolygonFromPoints({{164, 189}, {191, 143}, {227, 187}, {199, 228}});
 const vector<LineSegment2D> test_7_polygon_1 = makePolygonFromPoints({{118, 172}, {74, 114}, {132, 20}, {194, 108}, {149, 172}, {133, 156}});
 
+const vector<LineSegment2D> poly_union_1_1 = makePolygonFromPoints({{86, 207}, {144, 99}, {244, 154}, {182, 247}});
+const vector<LineSegment2D> poly_union_1_2 = makePolygonFromPoints({{368, 161}, {282, 241}, {199, 174}, {271, 94}});
+
 vector<LineSegment2D> makePolygonFromPoints(const vector<Point2D> points)
 {
     vector<LineSegment2D> polygon;
