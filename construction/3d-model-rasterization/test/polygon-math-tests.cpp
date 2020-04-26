@@ -4,16 +4,6 @@
 
 using namespace std;
 
-vector<LineSegment2D> reversed(const vector<LineSegment2D> &poly)
-{
-    vector<LineSegment2D> ret;
-    for (auto it = poly.rbegin(); it != poly.rend(); it++)
-    {
-        ret.push_back(!*it);
-    }
-    return ret;
-}
-
 Direction normalize(Direction dir)
 {
     if (Y_AXIS_INCREASES_DOWNWARD)

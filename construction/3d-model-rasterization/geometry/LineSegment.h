@@ -8,6 +8,12 @@
 
 class ModelBuilder;
 
+enum class Direction
+{
+    CLOCKWISE = 0,
+    COUNTER_CLOCKWISE = 1
+};
+
 struct LineSegment : std::pair<Point *, Point *>
 {
     LineSegment();
@@ -31,14 +37,18 @@ struct LineSegment2D
     Rectangle bounds;
     SurfaceInfo *surface;
 
-    bool intersects(const LineSegment2D &segment, Point2D &intersection, bool& online) const;
+    bool intersects(const LineSegment2D &segment, Point2D &intersection, bool &online) const;
 
     bool operator<(const LineSegment2D &rhs) const
     {
         if (first < rhs.first)
             return true;
+        if (rhs.first < first)
+            return false;
         if (second < rhs.second)
             return true;
+        if (rhs.second < second)
+            return false;
         return false;
     }
 
@@ -50,6 +60,11 @@ struct LineSegment2D
     LineSegment2D operator!() const
     {
         return {second, first, surface};
+    }
+
+    LineSegment2D normalize(Direction dir) const
+    {
+        return dir == Direction::CLOCKWISE ? *this : !*this;
     }
 
     std::string toString() const;

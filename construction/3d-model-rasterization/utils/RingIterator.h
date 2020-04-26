@@ -8,20 +8,20 @@ template <typename T, typename reftype, typename Container = std::vector<T>, typ
 class RingIteratorBase : public std::iterator<std::bidirectional_iterator_tag, T, ptrdiff_t>
 {
 protected:
-    Container &data;
+    Container *data;
 
     Iterator cursor;
     Iterator begin;
     Iterator end;
 
 public:
-    RingIteratorBase(Container &v) : data(v), cursor(v.begin()), begin(v.begin()), end(v.end()) {}
+    RingIteratorBase(Container &v) : data(&v), cursor(v.begin()), begin(v.begin()), end(v.end()) {}
 
     RingIteratorBase(Container &v, const Iterator &i) : data(v), cursor(i), begin(v.begin()), end(v.end()) {}
 
     RingIteratorBase(Container &v, const Iterator &i, const Iterator &j) : data(v), cursor(i), begin(i), end(j) {}
 
-    RingIteratorBase(Container &v, size_t i) : data(v), cursor(v.begin() + i % v.size()), begin(v.begin()), end(v.end()) {}
+    RingIteratorBase(Container &v, size_t i) : data(&v), cursor(v.begin() + i % v.size()), begin(v.begin()), end(v.end()) {}
 
     bool operator==(const RingIteratorBase &x) const
     {

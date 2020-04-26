@@ -125,7 +125,7 @@ TEST(PolygonSegmentation, Test6)
     polygons.push_back(test_6_polygon_1);
     polygons.push_back(test_6_polygon_2);
     polygons.push_back(test_6_polygon_3);
-    LineSegment2D slice1{ {0, 147}, {250, 147} };
+    LineSegment2D slice1{{0, 147}, {250, 147}};
 
     drawPolygonsToFile("Test6-0.svg", polygons);
     ASSERT_EQ(polygonsToString(polygons), test_6_step_0);
@@ -141,7 +141,7 @@ TEST(PolygonSegmentation, Test7)
     polygons.push_back(test_7_polygon_1);
     polygons.push_back(test_6_polygon_2);
     polygons.push_back(test_6_polygon_3);
-    LineSegment2D slice1{ {0, 163}, {250, 163} };
+    LineSegment2D slice1{{0, 163}, {250, 163}};
 
     drawPolygonsToFile("Test7-0.svg", polygons);
     ASSERT_EQ(polygonsToString(polygons), test_7_step_0);

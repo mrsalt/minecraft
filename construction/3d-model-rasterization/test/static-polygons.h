@@ -16,6 +16,13 @@ extern const std::vector<LineSegment2D> test_7_polygon_1;
 
 extern const std::vector<LineSegment2D> poly_union_1_1;
 extern const std::vector<LineSegment2D> poly_union_1_2;
+extern const std::vector<LineSegment2D> poly_union_2_1;
+extern const std::vector<LineSegment2D> poly_union_3_1;
+extern const std::vector<LineSegment2D> poly_union_3_2;
+extern const std::vector<LineSegment2D> poly_union_3_3;
+extern const std::vector<LineSegment2D> poly_union_3_4;
+extern const std::vector<LineSegment2D> poly_union_3_5;
+extern const std::vector<LineSegment2D> poly_union_3_6;
 
 std::vector<LineSegment2D> makePolygonFromPoints(const std::vector<Point2D> points);
 
@@ -24,3 +31,5 @@ std::vector<LineSegment2D> makeSquare(const Rectangle &rect);
 void printPolygonBounds(const std::vector<std::vector<LineSegment2D>> &polygons);
 
 std::string polygonsToString(const std::vector<std::vector<LineSegment2D>> &polygons, bool shortened = false);
+
+std::vector<LineSegment2D> reversed(const std::vector<LineSegment2D> &poly);

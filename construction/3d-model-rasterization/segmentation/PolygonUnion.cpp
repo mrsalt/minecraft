@@ -1,5 +1,5 @@
 #include "PolygonUnion.h"
-#include <map>
+#include <set>
 
 using namespace std;
 
@@ -30,10 +30,8 @@ bool PolygonUnion::findIntersectingSegments(const vector<LineSegment2D> &a, cons
             Point2D intersection;
             if (a[i].intersects(b[j], intersection, online))
             {
-                intersecting.push_back({true, intersection, &a[i]});
-                set_intersecting.insert(&a[i]);
-                intersecting.push_back({true, intersection, &b[j]});
-                set_intersecting.insert(&b[j]);
+                addIntersection(&a[i], intersection);
+                addIntersection(&b[j], intersection);
                 intersection_found = true;
             }
         }
@@ -41,14 +39,23 @@ bool PolygonUnion::findIntersectingSegments(const vector<LineSegment2D> &a, cons
     return intersection_found;
 }
 
+void PolygonUnion::addIntersection(const LineSegment2D *segment, Point2D location)
+{
+    auto p = intersection_points.insert({location, {}});
+    p.first->second.push_back(segment);
+    PolygonMath::addIntersection(segment, location);
+}
+
 vector<LineSegment2D> PolygonUnion::combinePolygons()
 {
+    updateIntersectingSetPointers();
+
     // PolygonUnion knows about a bunch of polygons, which can comprise N overlapping (or non-overlapping) polygons.
     // A PolygonUnion is a set of a single group of polygons that are all overlapping with each other.
     set<const vector<LineSegment2D> *> overlappingPolygons;
-    for (auto lineSegment : set_intersecting)
+    for (auto it : set_intersecting)
     {
-        auto poly = polygonOwningSegment(lineSegment);
+        auto poly = polygonOwningSegment(it.first);
         overlappingPolygons.insert(poly);
     }
 
@@ -68,57 +75,90 @@ vector<LineSegment2D> PolygonUnion::combinePolygons()
         }
     }
 
-    const LineSegment2D *currentSegment = leftMost;
-    const LineSegment2D *endAt = currentSegment;
     bool reachedEnd = false;
     vector<LineSegment2D> ret;
+    const LineSegment2D *currentSegment = leftMost;
     Direction dir = polygonDirection[polygonOwningSegment(currentSegment)];
+    auto it = getIterator<RingIterator<LineSegment2D>>(currentSegment);
+
+    LineSegment2D segment = currentSegment->normalize(dir);
+    Point2D lastPoint = segment.first;
+    const Point2D endAt = lastPoint;
     while (true)
     {
         // We want to iterate in the same direction (clockwise) around each polygon.
         // If the polygon's natural direction is counterclockwise, iterating counterclockwise
         // around it will actually be clockwise.
-        DividingSegment &div = iterate(currentSegment, dir, [&ret, &reachedEnd, endAt](const LineSegment2D *segment) {
-            if (reachedEnd)
-                return;
-            ret.push_back(*segment);
-            if (segment == endAt)
-                reachedEnd = true;
-        });
-        if (reachedEnd)
-            break;
-        ret.push_back({dir == Direction::CLOCKWISE ? div.line->first : div.line->second, div.intersection_point, div.line->surface});
 
-        // find another dividing segment that shares this same intersecting point.
-        bool found = false;
-        for (auto &divSegment : intersecting)
+        const LineSegment2D *nextSegment = nullptr;
+        auto &v = set_intersecting[currentSegment];
+        Point2D nextPoint = segment.second;
+
+        if (!v.empty())
         {
-            if (divSegment.intersection_point == div.intersection_point && &divSegment != &div)
+            // get the next intersection between lastPoint and segment.second, if there is one.
+
+            double maxDistance = 0;
+            double distanceToLastPoint = lastPoint.relativeDistance(segment.second);
+            for (auto &divSegment : v)
             {
-                currentSegment = divSegment.line;
-                dir = polygonDirection[polygonOwningSegment(currentSegment)];
-                ret.push_back({div.intersection_point, dir == Direction::CLOCKWISE ? divSegment.line->second : divSegment.line->first, divSegment.line->surface});
-                found = true;
-                break;
+                double relDistance = divSegment->intersection_point.relativeDistance(segment.second);
+                if (relDistance > maxDistance && relDistance < distanceToLastPoint)
+                {
+                    maxDistance = relDistance;
+                    nextPoint = divSegment->intersection_point;
+                    for (auto s : intersection_points[nextPoint])
+                    {
+                        if (s != divSegment->line)
+                            nextSegment = s;
+                    }
+                }
             }
         }
-        if (!found)
-            throw runtime_error("Logic error -- cannot find matching intersection");
+
+        ret.push_back({lastPoint, nextPoint, currentSegment->surface});
+        lastPoint = nextPoint;
+        if (lastPoint == endAt)
+            break;
+
+        if (nextSegment)
+        {
+            currentSegment = nextSegment;
+            dir = polygonDirection[polygonOwningSegment(currentSegment)];
+            it = getIterator<RingIterator<LineSegment2D>>(currentSegment);
+        }
+        else
+        {
+            dir == Direction::CLOCKWISE ? it++ : it--;
+            currentSegment = &(*it);
+        }
+        segment = currentSegment->normalize(dir);
     }
     return ret;
 }
 
-void combinePolygons(vector<std::vector<LineSegment2D>> &polygons)
+bool PolygonUnion::Comparator::operator()(const shared_ptr<PolygonUnion> &lhs, const shared_ptr<PolygonUnion> &rhs) const
 {
-    //TODO: create a 'Polygon2D' that knows it's bounds.  Replace all vector<LineSegment2D> with Polygon2D.
-    vector<Rectangle> bounds;
-    for (auto &p : polygons)
-        bounds.push_back(getBounds(p));
+    size_t lSize = lhs->polygons.size();
+    size_t rSize = rhs->polygons.size();
+    if (lSize != rSize)
+        return lSize < rSize;
+    lSize = lhs->intersecting.size();
+    rSize = rhs->intersecting.size();
+    if (lSize != rSize)
+        return lSize < rSize;
+    for (size_t i = 0; i < lhs->polygons.size(); i++)
+    {
+        lSize = lhs->polygons[i].size();
+        rSize = rhs->polygons[i].size();
+        if (lSize != rSize)
+            return lSize < rSize;
+    }
+    return false;
+}
 
-    // build up a list of sets of polygons which intersect each other.
-    vector<shared_ptr<PolygonUnion>> polygonSetMap(polygons.size());
-    set<shared_ptr<PolygonUnion>> polygonSets;
-
+void findOverlappingPolygons(const vector<vector<LineSegment2D>> &polygons, const vector<Rectangle> &bounds, vector<shared_ptr<PolygonUnion>> &polygonSetMap, set<shared_ptr<PolygonUnion>, PolygonUnion::Comparator> &polygonSets)
+{
     for (size_t i = 0; i < polygons.size(); i++)
     {
         for (size_t j = i + 1; j < polygons.size(); j++)
@@ -152,6 +192,20 @@ void combinePolygons(vector<std::vector<LineSegment2D>> &polygons)
             }
         }
     }
+}
+
+void combinePolygons(vector<std::vector<LineSegment2D>> &polygons)
+{
+    //TODO: create a 'Polygon2D' that knows it's bounds.  Replace all vector<LineSegment2D> with Polygon2D.
+    vector<Rectangle> bounds;
+    for (auto &p : polygons)
+        bounds.push_back(getBounds(p));
+
+    // build up a list of sets of polygons which intersect each other.
+    vector<shared_ptr<PolygonUnion>> polygonSetMap(polygons.size());
+    set<shared_ptr<PolygonUnion>, PolygonUnion::Comparator> polygonSets;
+
+    findOverlappingPolygons(polygons, bounds, polygonSetMap, polygonSets);
 
     if (polygonSets.empty())
         return; // no work to do

@@ -6,7 +6,7 @@
 #include <assert.h>
 #include <iostream>
 #include <functional>
-#include <set>
+#include <map>
 
 struct DividingSegment
 {
@@ -21,12 +21,6 @@ struct DividingSegment
     {
         return line->first != intersection_point && line->second != intersection_point;
     }
-};
-
-enum class Direction
-{
-    CLOCKWISE = 0,
-    COUNTER_CLOCKWISE = 1
 };
 
 const bool Y_AXIS_INCREASES_DOWNWARD = true; // true for computer graphics, false for standard cartesian coordinate system.
@@ -48,8 +42,28 @@ public:
 
 protected:
     const std::vector<std::vector<LineSegment2D>> &polygons;
-    std::set<const LineSegment2D *> set_intersecting;
+    std::map<const LineSegment2D *, std::vector<DividingSegment *>> set_intersecting;
     std::vector<DividingSegment> intersecting;
+
+    virtual void addIntersection(const LineSegment2D *segment, Point2D location)
+    {
+        intersecting.push_back({true, location, segment}); // is even/odd will be determined later
+        set_intersecting.insert({segment, {}});
+    }
+
+    // call this method after sorting intersecting.
+    void updateIntersectingSetPointers()
+    {
+        for (auto &pair : set_intersecting)
+        {
+            assert(pair.second.empty());
+        }
+        for (auto &intersection : intersecting)
+        {
+            auto &v = set_intersecting[intersection.line];
+            v.push_back(&intersection);
+        }
+    }
 
 protected:
     template <class I>
@@ -95,26 +109,27 @@ protected:
         auto it = getIterator<I>(start);
         auto begin = it;
         it++;
-        while (it != begin)
+        while (true)
         {
-            auto it_intersecting = set_intersecting.find(&(*it));
+            const LineSegment2D *ls = &(*it);
+            auto it_intersecting = set_intersecting.find(ls);
             if (it_intersecting != set_intersecting.end())
             {
-                const LineSegment2D *ls = &(*it);
-                for (auto &ds : intersecting)
-                {
-                    if (ds.line == ls)
-                        return ds;
-                }
-                throw std::runtime_error("Logic error -- found segment in set_intersecting but failed to find corresponding DividingSegment");
+                auto &vec = it_intersecting->second;
+                if (vec.size() == 0)
+                    throw std::runtime_error("Logic error -- found segment in set_intersecting but failed to find corresponding DividingSegment");
+                else if (vec.size() > 1)
+                    throw std::runtime_error("Logic error -- found segment in set_intersecting but failed to find exactly 1 corresponding DividingSegment");
+                return *vec[0];
             }
             else if (callback)
             {
-                callback(&(*it));
+                callback(ls);
             }
+            if (it == begin)
+                throw std::runtime_error("Logic error -- failed to find DividingSegment");
             it++;
         }
-        throw std::runtime_error("Logic error -- failed to find DividingSegment");
     }
 
     const std::vector<LineSegment2D> *polygonOwningSegment(const LineSegment2D *segment) const

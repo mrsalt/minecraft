@@ -16,6 +16,14 @@ const vector<LineSegment2D> test_7_polygon_1 = makePolygonFromPoints({{118, 172}
 
 const vector<LineSegment2D> poly_union_1_1 = makePolygonFromPoints({{86, 207}, {144, 99}, {244, 154}, {182, 247}});
 const vector<LineSegment2D> poly_union_1_2 = makePolygonFromPoints({{368, 161}, {282, 241}, {199, 174}, {271, 94}});
+const vector<LineSegment2D> poly_union_2_1 = makePolygonFromPoints({{150, 180}, {210, 100}, {300, 160}, {228, 246}});
+
+const vector<LineSegment2D> poly_union_3_1 = makePolygonFromPoints({{124, 62}, {132, 235}, {31, 156}});
+const vector<LineSegment2D> poly_union_3_2 = makePolygonFromPoints({{73, 77}, {141, 29}, {152, 110}});
+const vector<LineSegment2D> poly_union_3_3 = makePolygonFromPoints({{144, 185}, {86, 228}, {147, 266}});
+const vector<LineSegment2D> poly_union_3_4 = makePolygonFromPoints({{79, 140}, {79, 171}, {107, 171}, {107, 140}});
+const vector<LineSegment2D> poly_union_3_5 = makePolygonFromPoints({{19, 28}, {35, 54}, {49, 28}});
+const vector<LineSegment2D> poly_union_3_6 = makePolygonFromPoints({{19, 44}, {35, 18}, {49, 44}});
 
 vector<LineSegment2D> makePolygonFromPoints(const vector<Point2D> points)
 {
@@ -85,6 +93,16 @@ string polygonsToString(const vector<vector<LineSegment2D>> &polygons, bool shor
                 ret += format("  %zd: ", i) + seg.first.toString() + "-" + seg.second.toString() + "\n";
             }
         }
+    }
+    return ret;
+}
+
+vector<LineSegment2D> reversed(const vector<LineSegment2D> &poly)
+{
+    vector<LineSegment2D> ret;
+    for (auto it = poly.rbegin(); it != poly.rend(); it++)
+    {
+        ret.push_back(!*it);
     }
     return ret;
 }

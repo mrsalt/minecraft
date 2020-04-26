@@ -1,8 +1,18 @@
 #include "PolygonSegmentation.h"
+#include "string_format.h"
+#include "cairo-util.h"
+#include <set>
 
 using namespace std;
 
-static Rectangle getBounds(const vector<LineSegment2D> polygon)
+#define SPECIAL_POLYGON_DEBUG 0
+#if SPECIAL_POLYGON_DEBUG
+static int polyCounter = 0;
+static vector<LineSegment2D> *lastPoly = nullptr;
+bool drawPolysToFile = false;
+#endif
+
+static Rectangle getBounds(const vector<LineSegment2D> &polygon)
 {
     Rectangle bounds = polygon.front().bounds;
     for (const auto &segment : polygon)
@@ -84,8 +94,7 @@ SliceData::SliceData(const LineSegment2D &slice, const vector<vector<LineSegment
                 {
                     if (!segmentsOnSlice.empty())
                         handleSegmentsOnSlice(segmentsOnSlice);
-                    intersecting.push_back({true, intersection, &segment}); // is even/odd will be determined later
-                    set_intersecting.insert(&segment);
+                    addIntersection(&segment, intersection);
                 }
             }
             else if (segmentsOnSlice.size() > 1)
@@ -106,13 +115,6 @@ SliceData::SliceData(const LineSegment2D &slice, const vector<vector<LineSegment
         std::stable_sort(intersecting.begin(), intersecting.end(), [this](const DividingSegment &a, const DividingSegment &b) {
             return this->slice.first.relativeDistance(a.intersection_point) < this->slice.first.relativeDistance(b.intersection_point);
         });
-
-        //int i = 0;
-        //for (auto& ds : intersecting)
-        //{
-        //    size_t p = polygonOwningSegment(ds.line) - polygons.data();
-        //    cout << "segment " << i++ << " (" << *ds.line << ") owned by polygon " << p << endl;
-        //}
 
         // We must account for the possibility that two different polygons share an edge.
         // in this case, the edge that comes first is the one belonging to the
@@ -146,14 +148,24 @@ SliceData::SliceData(const LineSegment2D &slice, const vector<vector<LineSegment
             prevIntersection = ds.intersection_point;
             prevPolygon = currentPolygon;
         }
+        updateIntersectingSetPointers();
     }
-    //int i = 0;
-    //for (auto& ds : intersecting)
-    //{
-    //    size_t p = polygonOwningSegment(ds.line) - polygons.data();
-    //    Rectangle bounds = getBounds(polygons[p]);
-    //    cout << i++ << ": " << ds.intersection_point <<", " << *ds.line << " owned by " << p << " (bounds: " << bounds.min << "-" << bounds.max << ")" << endl;
-    //}
+
+#if SPECIAL_POLYGON_DEBUG
+    if (drawPolysToFile && intersecting.size())
+    {
+        vector<LineSegment2D> intersectingSegments;
+        int i = 0;
+        for (auto &ds : intersecting)
+        {
+            intersectingSegments.push_back(*ds.line);
+            size_t p = polygonOwningSegment(ds.line) - polygons.data();
+            Rectangle bounds = getBounds(polygons[p]);
+            cout << i++ << ": " << ds.intersection_point << ", " << *ds.line << " owned by " << p << " (bounds: " << bounds.min << "-" << bounds.max << ")" << endl;
+        }
+        ::drawPolygonToFile("interesecting-segments.svg", intersectingSegments, &slice);
+    }
+#endif
 }
 
 void SliceData::handleSegmentsOnSlice(vector<const LineSegment2D *> &segmentsOnSlice)
@@ -177,15 +189,13 @@ void SliceData::handleSegmentsOnSlice(vector<const LineSegment2D *> &segmentsOnS
                 break;
         }
         if (compareFirstToSecond) // means that second has been tested and it IS on the slice
-            intersecting.push_back({true, segmentsOnSlice.front()->second, segmentsOnSlice.front()});
+            addIntersection(segmentsOnSlice.front(), segmentsOnSlice.front()->second);
         else
-            intersecting.push_back({true, segmentsOnSlice.front()->first, segmentsOnSlice.front()});
+            addIntersection(segmentsOnSlice.front(), segmentsOnSlice.front()->first);
         if (onSlice(segmentsOnSlice.back()->second))
-            intersecting.push_back({true, segmentsOnSlice.back()->second, segmentsOnSlice.back()});
+            addIntersection(segmentsOnSlice.back(), segmentsOnSlice.back()->second);
         else
-            intersecting.push_back({true, segmentsOnSlice.back()->first, segmentsOnSlice.back()});
-        set_intersecting.insert(segmentsOnSlice.front());
-        set_intersecting.insert(segmentsOnSlice.back());
+            addIntersection(segmentsOnSlice.back(), segmentsOnSlice.back()->first);
         break;
     }
     segmentsOnSlice.clear();
@@ -196,6 +206,19 @@ void addSegment(const LineSegment2D &segment, vector<LineSegment2D> &new_polygon
     if (segment.first == segment.second)
         return;
     new_polygon.push_back(segment);
+#if SPECIAL_POLYGON_DEBUG
+    if (&new_polygon != lastPoly)
+    {
+        lastPoly = &new_polygon;
+        polyCounter++;
+    }
+
+    if (new_polygon.size() > 300)
+        throw exception("max polygon size reached");
+
+    if (drawPolysToFile)
+        drawPolygonToFile(format("Polygon-%d-size-%zd.svg", polyCounter, new_polygon.size()), new_polygon);
+#endif
     if (new_polygon.size() > 1)
     {
         assert(new_polygon.back().first == new_polygon[new_polygon.size() - 2].second);
@@ -299,6 +322,10 @@ vector<vector<LineSegment2D>> SliceData::segmentPolygons()
             // This check isn't necessary until test case 4, which is unusual.
             if (new_polygon.size() > 2)
                 new_polygon_list.push_back(new_polygon);
+#if SPECIAL_POLYGON_DEBUG
+            if (drawPolysToFile)
+                drawPolygonsToFile(format("intersecting-%d.svg", i), new_polygon_list);
+#endif
         }
     }
     for (auto &poly : nonIntersectingPolygons)

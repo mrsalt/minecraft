@@ -77,7 +77,7 @@ struct Point2D
             return true;
         if (y > rhs.y)
             return false;
-        return true;
+        return false;
     }
 
     bool operator==(const Point2D &rhs) const
