@@ -3,6 +3,7 @@
 #include "ModelGenerator.h"
 #include "ModelWriter_Wavefront.h"
 #include "PolygonSegmentation.h"
+#include "PolygonUnion.h"
 #include "string_format.h"
 #include "cairo-util.h"
 
@@ -136,6 +137,8 @@ void ModelGenerator::slicePolygonsAlongAxis(
             vector<vector<LineSegment>> shapes_by_lines = placePolygonsInLayer(activePolygons, p, member, pointOrderingMethod);
             cout << "    " << shapes_by_lines.size() << " separate shapes identified (cross section areas)." << endl;
             auto shapes_2D = intersectSurfacesWithPlane(shapes_by_lines, p, member, _2D_xaxis, _2D_yaxis);
+            combinePolygons(shapes_2D);
+
             size_t slices;
             slices = (size_t)round((stats.max.*_2D_yaxis - stats.min.*_2D_yaxis) / layerDist) + 1;
             for (size_t n = 0; n < slices; n++)
