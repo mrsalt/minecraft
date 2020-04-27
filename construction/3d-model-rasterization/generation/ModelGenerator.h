@@ -1,4 +1,5 @@
 #pragma once
+#include "CubeModel.h"
 #include "LineSegment.h"
 #include "ModelBuilder.h"
 #include "Polygon.h"
@@ -46,6 +47,7 @@ private:
         const double layerPosition,
         TMember member,
         PointComparisonMethod pointOrderingMethod);
+    IntSize calculateCubeDimensions();
 
     template <typename TMember>
     void insert_cross_model_polygons(
@@ -56,10 +58,13 @@ private:
         double &p,
         const Color &color);
 
+    void segment(const LineSegment2D& slice, std::vector<std::vector<LineSegment2D>>& polygons);
+
 private:
     const ModelBuilder &source;
     const ModelBuilder::Statistics stats;
     const double layerDist;
+    CubeModel cubeModel;
 
     // These 3 members are only used if we're outputting a 'cross' model (cross section 3D model)
     ModelBuilder cross_model;

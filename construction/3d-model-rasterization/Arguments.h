@@ -9,6 +9,7 @@ public:
     bool show_stats{false};
     std::string output_directory{"."};
     bool output_cross_model{false};
+    bool verbose_output{false};
 
     Arguments()
     {
@@ -17,5 +18,6 @@ public:
         addArgument<Type::BOOL_FLAG>("--show-stats", "-s", "Print statistics about the model and exit", &show_stats);
         addArgument<Type::STRING>("--output-dir", "-o", "Directory where output data is to be written", &output_directory);
         addArgument<Type::BOOL_FLAG>("--output-cross-model", "-oc", "Output a 3D cross section model", &output_cross_model);
+        addArgument<Type::BOOL_FLAG>("--verbose", "-v", "Output verbose logging", &verbose_output);
     }
 };

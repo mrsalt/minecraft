@@ -4,7 +4,7 @@
 
 void slicePolygons(const LineSegment2D &slice, std::vector<std::vector<LineSegment2D>> &polygons);
 
-class SliceData : protected PolygonMath
+class SliceData : public PolygonMath
 {
 public:
     SliceData(const LineSegment2D &slice, const std::vector<std::vector<LineSegment2D>> &polygons);

@@ -49,8 +49,13 @@ Point projectLineOntoPlane(const Point &pMin, const Point &pMax, double planeVal
     return pMin + pVec * t;
 }
 
+IntSize ModelGenerator::calculateCubeDimensions()
+{
+    return {(size_t)ceil(stats.extent.width / layerDist), (size_t)ceil(stats.extent.height / layerDist), (size_t)ceil(stats.extent.width / layerDist)};
+}
+
 ModelGenerator::ModelGenerator(const ModelBuilder &source, double model_height)
-    : source{source}, stats{source.getStatistics()}, layerDist{stats.extent.height / model_height}
+    : source{source}, stats{source.getStatistics()}, layerDist{stats.extent.height / model_height}, cubeModel(calculateCubeDimensions())
 {
 }
 
@@ -102,7 +107,8 @@ void ModelGenerator::slicePolygonsAlongAxis(
     std::sort(polyBounds.begin(), polyBounds.end(), polyOrderingMethod);
 
     const char *axisTitle = (member == &Point::x ? "x" : member == &Point::y ? "y" : member == &Point::z ? "z" : "?");
-    cout << "For axis " << axisTitle << " there are " << layerCount << " layers to generate." << endl;
+    if (args.verbose_output)
+        cout << "For axis " << axisTitle << " there are " << layerCount << " layers to generate." << endl;
 
     set<const PolygonBounds *> activePolygons;
     int nextPoly = 0;
@@ -131,11 +137,13 @@ void ModelGenerator::slicePolygonsAlongAxis(
             nextPoly++;
         }
 
-        cout << "  at layer #" << l << " (position: " << p << ") there are " << activePolygons.size() << " polygons to place." << endl;
+        if (args.verbose_output)
+            cout << "  at layer #" << l << " (position: " << p << ") there are " << activePolygons.size() << " polygons to place." << endl;
         if (activePolygons.size())
         {
             vector<vector<LineSegment>> shapes_by_lines = placePolygonsInLayer(activePolygons, p, member, pointOrderingMethod);
-            cout << "    " << shapes_by_lines.size() << " separate shapes identified (cross section areas)." << endl;
+            if (args.verbose_output)
+                cout << "    " << shapes_by_lines.size() << " separate shapes identified (cross section areas)." << endl;
             auto shapes_2D = intersectSurfacesWithPlane(shapes_by_lines, p, member, _2D_xaxis, _2D_yaxis);
             combinePolygons(shapes_2D);
 
@@ -147,7 +155,7 @@ void ModelGenerator::slicePolygonsAlongAxis(
                 Point2D p2{stats.max.*_2D_xaxis, stats.min.*_2D_yaxis + n * layerDist};
                 LineSegment2D slice{p1, p2};
                 //drawPolygonsToFile(format("%s-slice-%03d.svg", axisTitle, (int)l), shapes_2D, &slice);
-                slicePolygons(slice, shapes_2D);
+                segment(slice, shapes_2D);
             }
             slices = (size_t)round((stats.max.*_2D_xaxis - stats.min.*_2D_xaxis) / layerDist) + 1;
             for (size_t n = 0; n < slices; n++)
@@ -156,7 +164,7 @@ void ModelGenerator::slicePolygonsAlongAxis(
                 Point2D p2{stats.min.*_2D_xaxis + n * layerDist, stats.max.*_2D_yaxis};
                 LineSegment2D slice{p1, p2};
                 //drawPolygonsToFile(format("%s-slice-%03d.svg", axisTitle, (int)l), shapes_2D, &slice);
-                slicePolygons(slice, shapes_2D);
+                segment(slice, shapes_2D);
             }
 
             if (args.output_cross_model)
@@ -164,6 +172,29 @@ void ModelGenerator::slicePolygonsAlongAxis(
                 insert_cross_model_polygons(shapes_2D, _2D_xaxis, _2D_yaxis, member, p, color);
             }
         }
+    }
+}
+
+void ModelGenerator::segment(const LineSegment2D &slice, vector<vector<LineSegment2D>> &polygons)
+{
+    SliceData segmenter(slice, polygons);
+
+    if (!segmenter.polygonsAreIntersectedBySlice())
+        return; // nothing to do
+
+    if (args.output_cross_model)
+    {
+        // segmenting polygons by this slice is the process of dividing the polygon into smaller
+        // polygons wherever the 'slice' intersects with the polygon.  This is only needed
+        // if we want to output a cross section model.  Otherwise, the data available after
+        // constructing a 'SliceData' is enough to tell us which cube edges are inside a solid
+        // portion of the model or not.
+        polygons = segmenter.segmentPolygons();
+    }
+
+    for (auto& segment : segmenter.intersections())
+    {
+        segment.intersection_point
     }
 }
 
