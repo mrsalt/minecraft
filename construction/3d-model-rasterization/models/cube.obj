@@ -1,0 +1,44 @@
+#  Just a simple cube
+
+
+mtllib ./cube.mtl
+
+g
+v -1 -1 -1
+v  1 -1 -1
+v  1 -1  1
+v -1 -1  1
+v -1  1 -1
+v  1  1 -1
+v  1  1  1
+v -1  1  1
+
+g y-bottom
+usemtl y-bottom
+s 1
+f 1 2 3 4
+
+g y-top
+usemtl y-top
+s 2
+f 5 6 7 8
+
+g x-bottom
+usemtl x-bottom
+s 3
+f 1 4 8 5
+
+g x-top
+usemtl x-top
+s 4
+f 2 3 7 6
+
+g z-bottom
+usemtl z-bottom
+s 5
+f 1 2 6 5
+
+g z-top
+usemtl z-top
+s 6
+f 3 4 8 7

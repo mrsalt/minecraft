@@ -30,13 +30,15 @@ public:
     void generate(); // throws a model_error if there are problems.
 
 private:
-    template <typename TMember>
+    template <typename TMember, typename CMember>
     void slicePolygonsAlongAxis(
         std::vector<PolygonBounds> &polyBounds,
         const int layerCount,
         TMember member,
         TMember _2D_xaxis,
         TMember _2D_yaxis,
+        CMember cubeMember_xAxis,
+        CMember cubeMember_yAxis,
         PolygonComparisonMethod polyOrderingMethod,
         PointComparisonMethod pointOrderingMethod,
         const Color &color);
@@ -52,13 +54,14 @@ private:
     template <typename TMember>
     void insert_cross_model_polygons(
         const std::vector<std::vector<LineSegment2D>> &shapes_2D,
+        TMember& member,
         TMember &_2D_xaxis,
         TMember &_2D_yaxis,
-        TMember &member,
         double &p,
         const Color &color);
 
-    void segment(const LineSegment2D& slice, std::vector<std::vector<LineSegment2D>>& polygons);
+    template <typename TMember, typename CMember>
+    void segmentPolygons(const LineSegment2D& slice, size_t steps, std::vector<std::vector<LineSegment2D>>& polygons, TMember& member, TMember& _2D_xaxis, TMember& _2D_yaxis, CMember& cubeMember, double layerConstValue);
 
 private:
     const ModelBuilder &source;

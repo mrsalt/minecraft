@@ -1,0 +1,23 @@
+newmtl x-bottom
+Ka 0.200 0.500 0.200     #
+Kd 0.200 0.500 0.200     #
+
+newmtl x-top
+Ka 0.500 0.800 0.500     #
+Kd 0.500 0.800 0.500     #
+
+newmtl z-bottom
+Ka 0.500 0.200 0.200     #
+Kd 0.500 0.200 0.200     #
+
+newmtl z-top
+Ka 0.800 0.500 0.500     #
+Kd 0.800 0.500 0.500     #
+
+newmtl y-bottom
+Ka 0.200 0.200 0.200     # dark gray
+Kd 0.200 0.200 0.200     # dark gray
+
+newmtl y-top
+Ka 0.800 0.800 0.800     # light gray
+Kd 0.800 0.800 0.800     # light gray

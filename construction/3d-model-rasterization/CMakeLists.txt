@@ -12,6 +12,8 @@ include_directories(
 )
 
 set (SRCS
+    CubeModel.h
+    CubeModel.cpp
     ModelBuilder.h
     ModelBuilder.cpp
     generation/debug.h

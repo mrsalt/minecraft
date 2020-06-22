@@ -51,7 +51,7 @@ Point projectLineOntoPlane(const Point &pMin, const Point &pMax, double planeVal
 
 IntSize ModelGenerator::calculateCubeDimensions()
 {
-    return {(size_t)ceil(stats.extent.width / layerDist), (size_t)ceil(stats.extent.height / layerDist), (size_t)ceil(stats.extent.width / layerDist)};
+    return {(size_t)ceil(stats.extent.width / layerDist), (size_t)ceil(stats.extent.height / layerDist), (size_t)ceil(stats.extent.depth / layerDist)};
 }
 
 ModelGenerator::ModelGenerator(const ModelBuilder &source, double model_height)
@@ -93,13 +93,15 @@ vector<vector<LineSegment2D>> intersectSurfacesWithPlane(vector<vector<LineSegme
     return shapes_2D;
 }
 
-template <typename TMember>
+template <typename TMember, typename CMember>
 void ModelGenerator::slicePolygonsAlongAxis(
     vector<PolygonBounds> &polyBounds,
     const int layerCount,
     TMember member,
     TMember _2D_xaxis,
     TMember _2D_yaxis,
+    CMember cubeMember_xAxis,
+    CMember cubeMember_yAxis,
     PolygonComparisonMethod polyOrderingMethod,
     PointComparisonMethod pointOrderingMethod,
     const Color &color)
@@ -147,40 +149,99 @@ void ModelGenerator::slicePolygonsAlongAxis(
             auto shapes_2D = intersectSurfacesWithPlane(shapes_by_lines, p, member, _2D_xaxis, _2D_yaxis);
             combinePolygons(shapes_2D);
 
-            size_t slices;
-            slices = (size_t)round((stats.max.*_2D_yaxis - stats.min.*_2D_yaxis) / layerDist) + 1;
+            size_t slices, steps;
+            slices = (size_t)((stats.max.*_2D_yaxis - stats.min.*_2D_yaxis) / layerDist) + 1;
+            steps = (size_t)((stats.max.*_2D_xaxis - stats.min.*_2D_xaxis) / layerDist);
             for (size_t n = 0; n < slices; n++)
             {
                 Point2D p1{stats.min.*_2D_xaxis, stats.min.*_2D_yaxis + n * layerDist};
                 Point2D p2{stats.max.*_2D_xaxis, stats.min.*_2D_yaxis + n * layerDist};
                 LineSegment2D slice{p1, p2};
                 //drawPolygonsToFile(format("%s-slice-%03d.svg", axisTitle, (int)l), shapes_2D, &slice);
-                segment(slice, shapes_2D);
+                segmentPolygons(slice, steps, shapes_2D, member, _2D_xaxis, _2D_yaxis, cubeMember_xAxis, p);
             }
-            slices = (size_t)round((stats.max.*_2D_xaxis - stats.min.*_2D_xaxis) / layerDist) + 1;
+            slices = (size_t)((stats.max.*_2D_xaxis - stats.min.*_2D_xaxis) / layerDist) + 1;
+            steps = (size_t)((stats.max.*_2D_yaxis - stats.min.*_2D_yaxis) / layerDist);
             for (size_t n = 0; n < slices; n++)
             {
                 Point2D p1{stats.min.*_2D_xaxis + n * layerDist, stats.min.*_2D_yaxis};
                 Point2D p2{stats.min.*_2D_xaxis + n * layerDist, stats.max.*_2D_yaxis};
                 LineSegment2D slice{p1, p2};
                 //drawPolygonsToFile(format("%s-slice-%03d.svg", axisTitle, (int)l), shapes_2D, &slice);
-                segment(slice, shapes_2D);
+                segmentPolygons(slice, steps, shapes_2D, member, _2D_xaxis, _2D_yaxis, cubeMember_yAxis, p);
             }
 
             if (args.output_cross_model)
             {
-                insert_cross_model_polygons(shapes_2D, _2D_xaxis, _2D_yaxis, member, p, color);
+                insert_cross_model_polygons(shapes_2D, member, _2D_xaxis, _2D_yaxis, p, color);
             }
         }
     }
 }
 
-void ModelGenerator::segment(const LineSegment2D &slice, vector<vector<LineSegment2D>> &polygons)
+template <typename TMember, typename CMember>
+void ModelGenerator::segmentPolygons(const LineSegment2D &slice, size_t steps, vector<vector<LineSegment2D>> &polygons, TMember& member, TMember &_2D_xaxis, TMember &_2D_yaxis, CMember &cubeMember, double layerConstValue)
 {
     SliceData segmenter(slice, polygons);
 
     if (!segmenter.polygonsAreIntersectedBySlice())
         return; // nothing to do
+
+    Point2D v = (slice.second - slice.first);
+    v = (v / v) * layerDist;
+    bool inside = false;
+    size_t intersection = 0;
+    const Point2D zero{0., 0.};
+    Point2D p = slice.first;
+    size_t countIntersections = segmenter.intersections().size();
+    DividingSegment nextSegment = segmenter.intersections()[intersection];
+    Point2D nextPoint = nextSegment.intersection_point;
+    for (size_t s = 0; s < steps && intersection < countIntersections; s++)
+    {
+        Point2D cubeEnd = p + v;
+        bool insideAtCubeStart = inside;
+        Point2D minSolidPoint = p;
+        Point2D maxSolidPoint = p;
+        while (nextPoint - p > zero && nextPoint < cubeEnd)
+        {
+            if (nextSegment.is_even != inside)
+            {
+                if (inside)
+                    maxSolidPoint = nextPoint;
+                else if (minSolidPoint == p)
+                    minSolidPoint = nextPoint;
+                inside = nextSegment.is_even;
+            }
+            intersection++;
+            if (intersection == countIntersections)
+            {
+                assert(!inside);
+                break;
+            }
+            nextSegment = segmenter.intersections()[intersection];
+            nextPoint = nextSegment.intersection_point;
+        }
+        if (inside)
+        {
+            maxSolidPoint = cubeEnd;
+        }
+        if (minSolidPoint != maxSolidPoint)
+        {
+            double minPoint = ((minSolidPoint - p) / v).scalarDistanceFromOrigin();
+            double maxPoint = ((maxSolidPoint - p) / v).scalarDistanceFromOrigin();
+            assert(minPoint >= 0.0);
+            assert(maxPoint < 1.000001);
+
+            Point point;
+            point.*_2D_xaxis = p.x;
+            point.*_2D_yaxis = p.y;
+            point.*member = layerConstValue;
+
+            CubeData &cube = cubeModel.get(IntSize((point - stats.min) / layerDist));
+            (cube.*cubeMember).update(minPoint, maxPoint);
+        }
+        p = cubeEnd;
+    }
 
     if (args.output_cross_model)
     {
@@ -191,15 +252,10 @@ void ModelGenerator::segment(const LineSegment2D &slice, vector<vector<LineSegme
         // portion of the model or not.
         polygons = segmenter.segmentPolygons();
     }
-
-    for (auto& segment : segmenter.intersections())
-    {
-        segment.intersection_point
-    }
 }
 
 template <typename TMember>
-void ModelGenerator::insert_cross_model_polygons(const vector<vector<LineSegment2D>> &shapes_2D, TMember &_2D_xaxis, TMember &_2D_yaxis, TMember &member, double &p, const Color &color)
+void ModelGenerator::insert_cross_model_polygons(const vector<vector<LineSegment2D>> &shapes_2D, TMember &member, TMember &_2D_xaxis, TMember &_2D_yaxis, double &p, const Color &color)
 {
     for (auto &shape : shapes_2D)
     {
@@ -293,7 +349,7 @@ vector<vector<LineSegment>> ModelGenerator::placePolygonsInLayer(
                         closestPiece = adjacentPolygon;
                         // common edge spans the plane:
                         if (pair.second.first->*member <= layerPosition &&
-                            pair.second.second->*member > layerPosition)
+                            pair.second.second->*member >= layerPosition)
                         {
                             common_edge = pair.second;
                             common_edge.surfaceInfo = currentPiece->surface;
@@ -357,6 +413,8 @@ void ModelGenerator::generate()
         &Point::x,
         &Point::z,
         &Point::y,
+        &CubeData::z,
+        &CubeData::y,
         [](const PolygonBounds &a, const PolygonBounds &b) {
             return a.min.x < b.min.x;
         },
@@ -369,6 +427,8 @@ void ModelGenerator::generate()
         &Point::y,
         &Point::x,
         &Point::z,
+        &CubeData::x,
+        &CubeData::z,
         [](const PolygonBounds &a, const PolygonBounds &b) {
             return a.min.y < b.min.y;
         },
@@ -381,6 +441,8 @@ void ModelGenerator::generate()
         &Point::z,
         &Point::x,
         &Point::y,
+        &CubeData::x,
+        &CubeData::y,
         [](const PolygonBounds &a, const PolygonBounds &b) {
             return a.min.z < b.min.z;
         },
@@ -399,4 +461,69 @@ void ModelGenerator::generate()
         ModelWriter_Wavefront writer(args.output_directory, "cross-model");
         writer.write(cross_model);
     }
+
+    ModelBuilder solid_block_model;
+    map<Point, int> solid_point_map;
+    vector<pair<vector<int>, Color>> solid_model_polygons;
+    Color gray{ 125, 125, 125 };
+
+    auto addPoly = [&solid_block_model, &solid_point_map, &solid_model_polygons, &gray](const vector<Point> & poly)
+    {
+        vector<int> plane_polygon;
+        for (auto& point : poly)
+        {
+            auto it = solid_point_map.find(point);
+            int index;
+            if (it == solid_point_map.end())
+            {
+                index = (int)solid_block_model.points.size();
+                solid_point_map.insert({ point, index });
+                solid_block_model.verticeRead(point);
+            }
+            else
+            {
+                index = it->second;
+            }
+            plane_polygon.push_back(index);
+        }
+        solid_model_polygons.push_back({ plane_polygon, gray });
+    };
+
+    IntSize size = cubeModel.getSize();
+    cubeModel.iterate([addPoly, &size, this](const IntSize &start, const IntSize &end, const IntSize &increment, const CubeData **firstCube) {
+        auto cube = firstCube;
+        assert(start.height != size.height);
+        assert(start.depth != size.depth);
+        for (IntSize p = start; p != end; p += increment)
+        {
+            if (*cube)
+            {
+                assert(p.width != size.width);
+                double x = (double)p.width;
+                double y = (double)p.height;
+                double z = (double)p.depth;
+                //if (x != size.width && z != size.depth)
+                    addPoly({ {x, y, z}, {x + 1, y, z}, {x + 1, y, z + 1}, {x, y, z + 1} }); // xz plane
+                //if (x != size.width && y != size.height)
+                    addPoly({{x, y, z}, {x + 1, y, z}, {x + 1, y + 1, z}, {x, y + 1, z}}); // xy plane
+                //if (z != size.depth && y != size.height)
+                    addPoly({{x, y, z}, {x, y + 1, z}, {x, y + 1, z + 1}, {x, y, z + 1}}); // yz plane
+                if (!cubeModel.nextCubeAlongYAxis(cube)) // if next cube in Y direction is empty, add a face.
+                    addPoly({ {x, y + 1, z}, {x + 1, y + 1, z}, {x + 1, y + 1, z + 1}, {x, y + 1, z + 1} }); // xz plane + 1
+                if (!cubeModel.nextCubeAlongZAxis(cube)) // if next cube in Z direction is empty, add a face.
+                    addPoly({ {x, y, z + 1}, {x + 1, y, z + 1}, {x + 1, y + 1, z + 1}, {x, y + 1, z + 1} }); // xy plane + 1
+                if (!cubeModel.nextCubeAlongXAxis(cube)) // if next cube in X direction is empty, add a face.
+                    addPoly({ {x + 1, y, z}, {x + 1, y + 1, z}, {x + 1, y + 1, z + 1}, {x + 1, y, z + 1} }); // yz plane + 1                    
+            }
+            cube++;
+        }
+    });
+
+    for (auto& poly : solid_model_polygons)
+    {
+        solid_block_model.setCurrentColor(poly.second);
+        solid_block_model.polygonRead(poly.first.data(), (int)poly.first.size());
+    }
+    ModelWriter_Wavefront writer(args.output_directory, "solid-block-model");
+    writer.write(solid_block_model);
 }
