@@ -23,6 +23,11 @@ public:
     }
 };
 
+struct SegmentDebug
+{
+    std::vector<LineSegment2D> segments;
+};
+
 class ModelGenerator
 {
 public:
@@ -61,7 +66,7 @@ private:
         const Color &color);
 
     template <typename TMember, typename CMember>
-    void segmentPolygons(const LineSegment2D& slice, size_t steps, std::vector<std::vector<LineSegment2D>>& polygons, TMember& member, TMember& _2D_xaxis, TMember& _2D_yaxis, CMember& cubeMember, double layerConstValue);
+    void segmentPolygons(const LineSegment2D& slice, size_t steps, std::vector<std::vector<LineSegment2D>>& polygons, TMember& member, TMember& _2D_xaxis, TMember& _2D_yaxis, CMember& cubeMember, double layerConstValue, SegmentDebug * segmentDebug = nullptr);
 
 private:
     const ModelBuilder &source;

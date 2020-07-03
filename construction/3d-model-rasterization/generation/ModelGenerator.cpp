@@ -149,6 +149,14 @@ void ModelGenerator::slicePolygonsAlongAxis(
             auto shapes_2D = intersectSurfacesWithPlane(shapes_by_lines, p, member, _2D_xaxis, _2D_yaxis);
             combinePolygons(shapes_2D);
 
+            SegmentDebug sd;
+            SegmentDebug* segmentDebug = nullptr;
+            if (args.debug_segments)
+                segmentDebug = &sd;
+
+            if (segmentDebug)
+                drawPolygonsToFile(format("plane-%s-%03d-before-segmentation.svg", axisTitle, (int)l), shapes_2D);
+
             size_t slices, steps;
             slices = (size_t)((stats.max.*_2D_yaxis - stats.min.*_2D_yaxis) / layerDist) + 1;
             steps = (size_t)((stats.max.*_2D_xaxis - stats.min.*_2D_xaxis) / layerDist);
@@ -158,7 +166,7 @@ void ModelGenerator::slicePolygonsAlongAxis(
                 Point2D p2{stats.max.*_2D_xaxis, stats.min.*_2D_yaxis + n * layerDist};
                 LineSegment2D slice{p1, p2};
                 //drawPolygonsToFile(format("%s-slice-%03d.svg", axisTitle, (int)l), shapes_2D, &slice);
-                segmentPolygons(slice, steps, shapes_2D, member, _2D_xaxis, _2D_yaxis, cubeMember_xAxis, p);
+                segmentPolygons(slice, steps, shapes_2D, member, _2D_xaxis, _2D_yaxis, cubeMember_xAxis, p, segmentDebug);
             }
             slices = (size_t)((stats.max.*_2D_xaxis - stats.min.*_2D_xaxis) / layerDist) + 1;
             steps = (size_t)((stats.max.*_2D_yaxis - stats.min.*_2D_yaxis) / layerDist);
@@ -168,7 +176,15 @@ void ModelGenerator::slicePolygonsAlongAxis(
                 Point2D p2{stats.min.*_2D_xaxis + n * layerDist, stats.max.*_2D_yaxis};
                 LineSegment2D slice{p1, p2};
                 //drawPolygonsToFile(format("%s-slice-%03d.svg", axisTitle, (int)l), shapes_2D, &slice);
-                segmentPolygons(slice, steps, shapes_2D, member, _2D_xaxis, _2D_yaxis, cubeMember_yAxis, p);
+                segmentPolygons(slice, steps, shapes_2D, member, _2D_xaxis, _2D_yaxis, cubeMember_yAxis, p, segmentDebug);
+            }
+            if (segmentDebug)
+            {
+                vector<const LineSegment2D*> segments;
+                for (auto& segment : segmentDebug->segments)
+                    segments.push_back(&segment);
+                segments.push_back(nullptr);
+                drawPolygonsToFileWithSegments(format("plane-%s-%03d-after-segmentation.svg", axisTitle, (int)l), shapes_2D, segments.data());
             }
 
             if (args.output_cross_model)
@@ -180,7 +196,7 @@ void ModelGenerator::slicePolygonsAlongAxis(
 }
 
 template <typename TMember, typename CMember>
-void ModelGenerator::segmentPolygons(const LineSegment2D &slice, size_t steps, vector<vector<LineSegment2D>> &polygons, TMember& member, TMember &_2D_xaxis, TMember &_2D_yaxis, CMember &cubeMember, double layerConstValue)
+void ModelGenerator::segmentPolygons(const LineSegment2D &slice, size_t steps, vector<vector<LineSegment2D>> &polygons, TMember& member, TMember &_2D_xaxis, TMember &_2D_yaxis, CMember &cubeMember, double layerConstValue, SegmentDebug* segmentDebug)
 {
     SliceData segmenter(slice, polygons);
 
@@ -193,8 +209,22 @@ void ModelGenerator::segmentPolygons(const LineSegment2D &slice, size_t steps, v
     size_t intersection = 0;
     const Point2D zero{0., 0.};
     Point2D p = slice.first;
-    size_t countIntersections = segmenter.intersections().size();
-    DividingSegment nextSegment = segmenter.intersections()[intersection];
+    auto& intersections = segmenter.intersections();
+    size_t countIntersections = intersections.size();
+    static SolidColorSurface segmentColor({ 120, 120, 230 }); // light blue
+    static SolidColorSurface cubeSegmentColor({ 230, 230, 120 }); // light yellow
+
+    if (segmentDebug)
+    {
+        const DividingSegment* prev = nullptr;
+        for (const DividingSegment& segment : intersections)
+        {
+            if (prev && prev->is_even)
+                segmentDebug->segments.push_back(LineSegment2D(prev->intersection_point, segment.intersection_point, &segmentColor));
+            prev = &segment;
+        }
+    }
+    DividingSegment nextSegment = intersections[intersection];
     Point2D nextPoint = nextSegment.intersection_point;
     for (size_t s = 0; s < steps && intersection < countIntersections; s++)
     {
@@ -218,7 +248,7 @@ void ModelGenerator::segmentPolygons(const LineSegment2D &slice, size_t steps, v
                 assert(!inside);
                 break;
             }
-            nextSegment = segmenter.intersections()[intersection];
+            nextSegment = intersections[intersection];
             nextPoint = nextSegment.intersection_point;
         }
         if (inside)
@@ -227,6 +257,10 @@ void ModelGenerator::segmentPolygons(const LineSegment2D &slice, size_t steps, v
         }
         if (minSolidPoint != maxSolidPoint)
         {
+            if (segmentDebug)
+            {
+                segmentDebug->segments.push_back(LineSegment2D(minSolidPoint, maxSolidPoint, &cubeSegmentColor));
+            }
             double minPoint = ((minSolidPoint - p) / v).scalarDistanceFromOrigin();
             double maxPoint = ((maxSolidPoint - p) / v).scalarDistanceFromOrigin();
             assert(minPoint >= 0.0);

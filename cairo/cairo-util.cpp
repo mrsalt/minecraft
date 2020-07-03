@@ -105,7 +105,7 @@ void draw_polygon(const vector<LineSegment2D> &polygon, cairo_t *cr, double scal
     }
 }
 
-void drawPolygonsToFileHelper(string filename, GetNextPolygonCallback callback, void *ctx, const LineSegment2D *slice)
+void drawPolygonsToFileHelper(string filename, GetNextPolygonCallback callback, void *ctx, const LineSegment2D **slices)
 {
     cairo_surface_t *surface;
     cairo_t *cr;
@@ -141,12 +141,27 @@ void drawPolygonsToFileHelper(string filename, GetNextPolygonCallback callback, 
         draw_polygon(shrink_polygon(*poly, shrink / scale), cr, scale, rect, padding);
     }
 
-    if (slice)
+    if (slices)
     {
-        cairo_set_source_rgba(cr, 0, 0, 0, 0.5);
-        cairo_move_to(cr, scale * (slice->first.x - rect.min.x + padding), scale * (slice->first.y - rect.min.y + padding));
-        cairo_line_to(cr, scale * (slice->second.x - rect.min.x + padding), scale * (slice->second.y - rect.min.y + padding));
-        cairo_stroke(cr);
+        const LineSegment2D* slice;
+        while (slice = *slices++)
+        {
+            if (slice->surface)
+            {
+                Color c = slice->surface->getRGB();
+                cairo_set_source_rgba(cr, c.R / 255.0, c.G / 255.0, c.B / 255.0, 0.5);
+            }
+            else
+            {
+                cairo_set_source_rgba(cr, 0, 0, 0, 0.5);
+            }
+            cairo_move_to(cr, scale * (slice->first.x - rect.min.x + padding), scale * (slice->first.y - rect.min.y + padding));
+            cairo_line_to(cr, scale * (slice->second.x - rect.min.x + padding), scale * (slice->second.y - rect.min.y + padding));
+            cairo_stroke(cr);
+
+            draw_dot(cr, scale, slice->first, rect, padding);
+            draw_dot(cr, scale, slice->second, rect, padding);
+        }
     }
 
     cairo_destroy(cr);
@@ -164,10 +179,17 @@ const vector<LineSegment2D> *GetNextPoly(void *ctx)
     return &p.second->at(p.first++);
 }
 
-void drawPolygonsToFile(string filename, const vector<vector<LineSegment2D>> &polygons, const LineSegment2D *slice)
+void drawPolygonsToFileWithSegments(string filename, const vector<vector<LineSegment2D>> &polygons, const LineSegment2D **slices)
 {
     pair<int, const vector<vector<LineSegment2D>> *> ctx{0, &polygons};
-    drawPolygonsToFileHelper(filename, GetNextPoly, &ctx, slice);
+    drawPolygonsToFileHelper(filename, GetNextPoly, &ctx, slices);
+}
+
+void drawPolygonsToFile(std::string filename, const std::vector<std::vector<LineSegment2D>>& polygons, const LineSegment2D* slice)
+{
+    pair<int, const vector<vector<LineSegment2D>>*> ctx{ 0, &polygons };
+    const LineSegment2D* slices[] = { slice, nullptr };
+    drawPolygonsToFileHelper(filename, GetNextPoly, &ctx, slices);
 }
 
 const vector<LineSegment2D> *GetNextPolySingle(void *ctx)
@@ -182,8 +204,8 @@ const vector<LineSegment2D> *GetNextPolySingle(void *ctx)
     return p.second;
 }
 
-void drawPolygonToFile(string filename, const vector<LineSegment2D> &polygon, const LineSegment2D *slice)
+void drawPolygonToFile(string filename, const vector<LineSegment2D> &polygon, const LineSegment2D **slices)
 {
     pair<int, const vector<LineSegment2D> *> ctx{0, &polygon};
-    drawPolygonsToFileHelper(filename, GetNextPolySingle, &ctx, slice);
+    drawPolygonsToFileHelper(filename, GetNextPolySingle, &ctx, slices);
 }
