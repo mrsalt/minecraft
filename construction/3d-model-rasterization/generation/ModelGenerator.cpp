@@ -211,6 +211,7 @@ void ModelGenerator::segmentPolygons(const LineSegment2D &slice, size_t steps, v
     Point2D p = slice.first;
     auto& intersections = segmenter.intersections();
     size_t countIntersections = intersections.size();
+    bool isVerticalSlice = abs(slice.first.x - slice.second.x) < 0.000001;
     static SolidColorSurface segmentColor({ 120, 120, 230 }); // light blue
     static SolidColorSurface cubeSegmentColor({ 230, 230, 120 }); // light yellow
 
@@ -232,8 +233,14 @@ void ModelGenerator::segmentPolygons(const LineSegment2D &slice, size_t steps, v
         bool insideAtCubeStart = inside;
         Point2D minSolidPoint = p;
         Point2D maxSolidPoint = p;
-        while (nextPoint - p > zero && nextPoint < cubeEnd)
+        while (true)
         {
+            double distPastStartOfCube = isVerticalSlice ? nextPoint.y - p.y : nextPoint.x - p.x;
+            if (distPastStartOfCube < 0.0)
+                break;
+            double distToEndOfCube = isVerticalSlice ? cubeEnd.y - nextPoint.y : cubeEnd.x - nextPoint.x;
+            if (distToEndOfCube < 0.0)
+                break;
             if (nextSegment.is_even != inside)
             {
                 if (inside)
