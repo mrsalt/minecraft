@@ -35,14 +35,14 @@ public:
         , cubes_per_row{size.width + 1}
         , non_empty_cubes{ 0 }
     {
-        size_t vertices = cubes_per_layer * size.height;
+        size_t vertices = cubes_per_layer * (size.height + 1);
         data = new CubeData*[vertices];
         memset(data, 0, sizeof(CubeData*) * vertices);
     }
 
     ~CubeModel()
     {
-        size_t vertices = cubes_per_layer * size.height;
+        size_t vertices = cubes_per_layer * (size.height + 1);
         for (size_t i = 0; i < vertices; i++) {
             CubeData* e = data[i];
             if (e) delete e;
