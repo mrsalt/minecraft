@@ -22,6 +22,12 @@ struct LineSegment : std::pair<Point *, Point *>
     static LineSegment create(Point *a, Point *b, PointComparisonMethod lessThan);
     void print(std::ostream &out, const Point *first, bool printCoordinates = false) const;
 
+    template <typename TMember>
+    bool spansPlane(const double layerPosition, TMember member) const
+    {
+        return (first->*member <= layerPosition && second->*member >= layerPosition);
+    }
+
     SurfaceInfo *surfaceInfo{nullptr};
 };
 

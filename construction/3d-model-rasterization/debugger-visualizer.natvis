@@ -7,4 +7,12 @@
       <Item Name="[y]" ExcludeView="simple">y,g</Item>
     </Expand>
   </Type>
+  <Type Name="Point">
+    <DisplayString>{{ x={x,g}, y={y,g}, y={z,g} }}</DisplayString>
+    <Expand>
+      <Item Name="[x]" ExcludeView="simple">x,g</Item>
+      <Item Name="[y]" ExcludeView="simple">y,g</Item>
+      <Item Name="[z]" ExcludeView="simple">z,g</Item>
+    </Expand>
+  </Type>
 </AutoVisualizer>

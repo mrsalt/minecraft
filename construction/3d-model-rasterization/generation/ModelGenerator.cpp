@@ -15,9 +15,8 @@ using namespace std;
 
 extern const Arguments &args;
 
-pair<bool, LineSegment> areAdjacent(const Polygon &first, const Polygon &second, PointComparisonMethod aPrecedesB)
+size_t commonVertices(const Polygon &first, const Polygon &second, Point* common_vertices[], size_t common_vertice_size)
 {
-    Point *common_vertices[2];
     size_t count_common = 0;
     for (auto p1 : first.vertices)
     {
@@ -25,19 +24,42 @@ pair<bool, LineSegment> areAdjacent(const Polygon &first, const Polygon &second,
         {
             if (p1 == p2)
             {
-                assert(count_common < 2);
+                assert(count_common < common_vertice_size);
                 common_vertices[count_common++] = p1;
             }
         }
     }
-    if (count_common == 2)
+    return count_common;
+}
+
+template <typename TMember>
+pair<bool, LineSegment> areAdjacent(const Polygon& first, const Polygon& second, PointComparisonMethod aPrecedesB, const double layerPosition, TMember member)
+{
+    const int common_size = 5;
+    Point* common_vertices[common_size];
+    size_t count = commonVertices(first, second, common_vertices, common_size);
+    if (count == 2)
     {
-        return {true, LineSegment::create(common_vertices[0], common_vertices[1], aPrecedesB)};
+        return { true, LineSegment::create(common_vertices[0], common_vertices[1], aPrecedesB) };
     }
-    else
+    else if (count < 2)
     {
-        return {false, LineSegment()};
+        return { false, LineSegment() };
     }
+    // This is a very rare case, but it does occur in some models.  In a properly constructed model, only
+    // two vertices of any two adjacent polygons should be common.  This is not true for all models however.
+    // If there are more than two common vertices, we need to find the two common vertices that form a line
+    // segment spanning a plane.
+    for (size_t i = 0; i < count; i++)
+    {
+        size_t second = count == i - 1 ? 0 : i + 1;
+        LineSegment segment = LineSegment::create(common_vertices[i], common_vertices[second], aPrecedesB);
+        if (segment.spansPlane(layerPosition, member))
+        {
+            return { true, segment };
+        }
+    }
+    return { false, LineSegment() };
 }
 
 template <typename TMember>
@@ -383,14 +405,13 @@ vector<vector<LineSegment>> ModelGenerator::placePolygonsInLayer(
                     if (it == unplacedPolygons.end())
                         continue;
                     //cout << format("  %s IS in unplaced polygon list", adjacentPolygon->toString(source).c_str()) << endl;
-                    auto pair = areAdjacent(*currentPiece, *adjacentPolygon, pointOrderingMethod);
+                    auto pair = areAdjacent(*currentPiece, *adjacentPolygon, pointOrderingMethod, layerPosition, member);
                     if (pair.first)
                     {
                         //cout << format("  found adjacent polygon %s", adjacentPolygon->toString(source).c_str()) << endl;
                         closestPiece = adjacentPolygon;
                         // common edge spans the plane:
-                        if (pair.second.first->*member <= layerPosition &&
-                            pair.second.second->*member >= layerPosition)
+                        if (pair.second.spansPlane(layerPosition, member))
                         {
                             common_edge = pair.second;
                             common_edge.surfaceInfo = currentPiece->surface;
@@ -404,7 +425,7 @@ vector<vector<LineSegment>> ModelGenerator::placePolygonsInLayer(
                 if (!common_edge)
                 {
                     assert(currentPiece != firstPiece);
-                    auto ret = areAdjacent(*currentPiece, *firstPiece, pointOrderingMethod);
+                    auto ret = areAdjacent(*currentPiece, *firstPiece, pointOrderingMethod, layerPosition, member);
                     if (!ret.first)
                     {
                         write_debug_model("debug", source, unplacedPolygons, firstPiece, placed, currentPiece, closestPiece, layerPosition);
