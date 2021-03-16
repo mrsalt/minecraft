@@ -13,4 +13,15 @@ struct Color
                G == rhs.G &&
                B == rhs.B;
     }
+
+    bool operator<(const Color& rhs) const
+    {
+        return intVal() < rhs.intVal();
+    }
+
+    int intVal() const
+    {
+        return R + (G << 8) + (B << 16);
+    }
+
 };

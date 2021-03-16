@@ -5,6 +5,7 @@
 #include "Size.h"
 #include "Surface.h"
 
+#include <map>
 #include <set>
 #include <vector>
 
@@ -53,9 +54,19 @@ public:
     {
         if (currentSurfaceInfo && currentSurfaceInfo->getRGB() == c)
             return;
-        SolidColorSurface *s = new SolidColorSurface(c);
+        std::map<Color, SolidColorSurface*>::const_iterator it = surfaceInfoMap.find(c);
+        SolidColorSurface* s;
+        if (it == surfaceInfoMap.end())
+        {
+            s = new SolidColorSurface(c);
+            surfaceInfos.push_back(s);
+            surfaceInfoMap.insert({ c, s });
+        }
+        else
+        {
+            s = (it->second);
+        }
         currentSurfaceInfo = s;
-        surfaceInfos.push_back(s);
     }
 
     Statistics getStatistics() const
@@ -89,4 +100,5 @@ public:
     std::vector<std::vector<int>> adjacent_polygons; // these are indexed by vertice index
     std::vector<SurfaceInfo *> surfaceInfos;
     SurfaceInfo *currentSurfaceInfo = nullptr;
+    std::map<Color, SolidColorSurface*> surfaceInfoMap;
 };
