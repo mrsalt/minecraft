@@ -38,6 +38,19 @@ public:
         return *this;
     }
 
+    Rectangle& operator+=(const Point2D& other)
+    {
+        if (other.x < min.x)
+            min.x = other.x;
+        if (other.y < min.y)
+            min.y = other.y;
+        if (other.x > max.x)
+            max.x = other.x;
+        if (other.y > max.y)
+            max.y = other.y;
+        return *this;
+    }
+
     Point2D min;
     Point2D max;
 };

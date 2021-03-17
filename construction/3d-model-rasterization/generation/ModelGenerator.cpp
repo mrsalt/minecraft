@@ -115,6 +115,19 @@ vector<vector<LineSegment2D>> intersectSurfacesWithPlane(vector<vector<LineSegme
     return shapes_2D;
 }
 
+static vector<LineSegment2D> getLineSegments(Point2D p1, Point2D p2, Point2D increment, size_t count)
+{
+    vector<LineSegment2D> segments;
+    for (size_t n = 0; n < count; n++)
+    {
+        LineSegment2D slice{ p1, p2 };
+        segments.push_back(slice);
+        p1 += increment;
+        p2 += increment;
+    }
+    return segments;
+}
+
 template <typename TMember, typename CMember>
 void ModelGenerator::slicePolygonsAlongAxis(
     vector<PolygonBounds> &polyBounds,
@@ -171,43 +184,62 @@ void ModelGenerator::slicePolygonsAlongAxis(
             auto shapes_2D = intersectSurfacesWithPlane(shapes_by_lines, p, member, _2D_xaxis, _2D_yaxis);
             combinePolygons(shapes_2D);
 
+            vector<LineSegment2D> slices1, slices2;
+            size_t steps1, steps2;
+            {
+                size_t slices = (size_t)((stats.max.*_2D_yaxis - stats.min.*_2D_yaxis) / layerDist) + 1;
+                steps1 = (size_t)((stats.max.*_2D_xaxis - stats.min.*_2D_xaxis) / layerDist);
+                Point2D p1{ stats.min.*_2D_xaxis, stats.min.*_2D_yaxis };
+                Point2D p2{ stats.max.*_2D_xaxis, stats.min.*_2D_yaxis };
+                Point2D increment{ 0, layerDist };
+                slices1 = getLineSegments(p1, p2, increment, slices);
+            }
+            {
+                size_t slices = (size_t)((stats.max.*_2D_xaxis - stats.min.*_2D_xaxis) / layerDist) + 1;
+                steps2 = (size_t)((stats.max.*_2D_yaxis - stats.min.*_2D_yaxis) / layerDist);
+                Point2D p1{ stats.min.*_2D_xaxis, stats.min.*_2D_yaxis };
+                Point2D p2{ stats.min.*_2D_xaxis, stats.max.*_2D_yaxis };
+                Point2D increment{ layerDist, 0 };
+                slices2 = getLineSegments(p1, p2, increment, slices);
+            }
+
             SegmentDebug sd;
             SegmentDebug* segmentDebug = nullptr;
             if (args.debug_segments)
                 segmentDebug = &sd;
 
             if (segmentDebug)
-                drawPolygonsToFile(format("plane-%s-%03d-before-segmentation.svg", axisTitle, (int)l), shapes_2D);
+            {
+                vector<const LineSegment2D*> segments;
+                for (auto& segment : slices1)
+                    segments.push_back(&segment);
+                for (auto& segment : slices2)
+                    segments.push_back(&segment);
+                segments.push_back(nullptr);
 
-            size_t slices, steps;
-            slices = (size_t)((stats.max.*_2D_yaxis - stats.min.*_2D_yaxis) / layerDist) + 1;
-            steps = (size_t)((stats.max.*_2D_xaxis - stats.min.*_2D_xaxis) / layerDist);
-            for (size_t n = 0; n < slices; n++)
-            {
-                Point2D p1{stats.min.*_2D_xaxis, stats.min.*_2D_yaxis + n * layerDist};
-                Point2D p2{stats.max.*_2D_xaxis, stats.min.*_2D_yaxis + n * layerDist};
-                LineSegment2D slice{p1, p2};
-                //drawPolygonsToFile(format("%s-slice-%03d.svg", axisTitle, (int)l), shapes_2D, &slice);
-                segmentPolygons(slice, steps, shapes_2D, member, _2D_xaxis, _2D_yaxis, cubeMember_xAxis, p, segmentDebug);
+                drawPolygonsToFileWithSegments(format("plane-%s-%03d-before-segmentation.svg", axisTitle, (int)l), shapes_2D, segments.data());
             }
-            slices = (size_t)((stats.max.*_2D_xaxis - stats.min.*_2D_xaxis) / layerDist) + 1;
-            steps = (size_t)((stats.max.*_2D_yaxis - stats.min.*_2D_yaxis) / layerDist);
-            for (size_t n = 0; n < slices; n++)
+
+            for (LineSegment2D & slice : slices1)
             {
-                Point2D p1{stats.min.*_2D_xaxis + n * layerDist, stats.min.*_2D_yaxis};
-                Point2D p2{stats.min.*_2D_xaxis + n * layerDist, stats.max.*_2D_yaxis};
-                LineSegment2D slice{p1, p2};
                 //drawPolygonsToFile(format("%s-slice-%03d.svg", axisTitle, (int)l), shapes_2D, &slice);
-                segmentPolygons(slice, steps, shapes_2D, member, _2D_xaxis, _2D_yaxis, cubeMember_yAxis, p, segmentDebug);
+                segmentPolygons(slice, steps1, shapes_2D, member, _2D_xaxis, _2D_yaxis, cubeMember_xAxis, p, segmentDebug);
             }
-            if (segmentDebug)
+
+            for (LineSegment2D& slice : slices2)
+            {
+                //drawPolygonsToFile(format("%s-slice-%03d.svg", axisTitle, (int)l), shapes_2D, &slice);
+                segmentPolygons(slice, steps2, shapes_2D, member, _2D_xaxis, _2D_yaxis, cubeMember_yAxis, p, segmentDebug);
+            }
+
+            /*if (segmentDebug)
             {
                 vector<const LineSegment2D*> segments;
                 for (auto& segment : segmentDebug->segments)
                     segments.push_back(&segment);
                 segments.push_back(nullptr);
                 drawPolygonsToFileWithSegments(format("plane-%s-%03d-after-segmentation.svg", axisTitle, (int)l), shapes_2D, segments.data());
-            }
+            }*/
 
             if (args.output_cross_model)
             {
@@ -453,6 +485,47 @@ vector<vector<LineSegment>> ModelGenerator::placePolygonsInLayer(
     return shapes;
 }
 
+//static Color getColorForFace(double sliceNumber)
+//{
+//    Color gray{ 20, 20, 20 };
+//    return gray;
+//}
+
+static Color getColorForFace(double sliceNumber)
+{
+    Color gray{ 125, 125, 125 };
+    static Color colors[] = {
+        {0, 0, 0},       // black          (0)
+        {150, 125, 125}, // pink           (5)
+        {0, 0, 0},       // black          (10)
+        {125, 150, 125}, // light green    (15)
+        {0, 0, 0},       // black          (20)
+        //{125, 125, 150}, // light blue     (25)
+        {100, 100, 255}, // bright blue     (25)
+        {0, 0, 0},       // black          (30)
+        {150, 150, 125}, // yellow         (35)
+        {0, 0, 0},       // black          (40)
+        {150, 125, 150}, // purple         (45)
+        {0, 0, 0},       // black          (50)
+        {125, 50, 50},   // darker red     (55)
+        {0, 0, 0},       // black          (60)
+        {50, 125, 50},   // darker green   (65)
+        {0, 0, 0},       // black          (70)
+        {50, 50, 125},   // darker blue    (75)
+        {0, 0, 0},       // black          (80)
+        {125, 125, 50},  // darker yellow  (85)
+        {0, 0, 0},       // black          (90)
+        {125, 50, 125},  // darker purple  (95)
+        {0, 0, 0},       // black          (100)
+    };
+    //bool fifthPlane = ((int)(sliceNumber + 0.1)) % 5 == 0;
+    //int fifthColor = abs(((int)(sliceNumber + 0.1)) / 5);
+    //return fifthPlane ? colors[fifthColor] : gray;
+    Color c = { (uint8_t)50, (uint8_t)(50 + (sliceNumber * 4)), (uint8_t)50 };
+    //Color c = { (uint8_t)(50 + (sliceNumber * 4)), (uint8_t)50, (uint8_t)(50 + (sliceNumber * 4)) }; // purple
+    return c;
+}
+
 void ModelGenerator::generate()
 {
     if (stats.count_vertices == 0 || stats.count_polygons == 0)
@@ -527,9 +600,8 @@ void ModelGenerator::generate()
     ModelBuilder solid_block_model;
     map<Point, int> solid_point_map;
     vector<pair<vector<int>, Color>> solid_model_polygons;
-    Color gray{ 125, 125, 125 };
 
-    auto addPoly = [&solid_block_model, &solid_point_map, &solid_model_polygons, &gray](const vector<Point> & poly)
+    auto addPoly = [&solid_block_model, &solid_point_map, &solid_model_polygons](const vector<Point> & poly, double sliceNumber)
     {
         vector<int> plane_polygon;
         for (auto& point : poly)
@@ -548,7 +620,8 @@ void ModelGenerator::generate()
             }
             plane_polygon.push_back(index);
         }
-        solid_model_polygons.push_back({ plane_polygon, gray });
+
+        solid_model_polygons.push_back({ plane_polygon, getColorForFace(sliceNumber) });
     };
 
     IntSize size = cubeModel.getSize();
@@ -565,17 +638,17 @@ void ModelGenerator::generate()
                 double y = (double)p.height;
                 double z = (double)p.depth;
                 //if (x != size.width && z != size.depth)
-                    addPoly({ {x, y, z}, {x + 1, y, z}, {x + 1, y, z + 1}, {x, y, z + 1} }); // xz plane
+                    addPoly({ {x, y, z}, {x + 1, y, z}, {x + 1, y, z + 1}, {x, y, z + 1} }, y); // xz plane (bottom)
                 //if (x != size.width && y != size.height)
-                    addPoly({{x, y, z}, {x + 1, y, z}, {x + 1, y + 1, z}, {x, y + 1, z}}); // xy plane
+                    addPoly({{x, y, z}, {x + 1, y, z}, {x + 1, y + 1, z}, {x, y + 1, z}}, z); // xy plane (front)
                 //if (z != size.depth && y != size.height)
-                    addPoly({{x, y, z}, {x, y + 1, z}, {x, y + 1, z + 1}, {x, y, z + 1}}); // yz plane
+                    addPoly({{x, y, z}, {x, y + 1, z}, {x, y + 1, z + 1}, {x, y, z + 1}}, x); // yz plane (left)
                 if (!cubeModel.nextCubeAlongYAxis(cube)) // if next cube in Y direction is empty, add a face.
-                    addPoly({ {x, y + 1, z}, {x + 1, y + 1, z}, {x + 1, y + 1, z + 1}, {x, y + 1, z + 1} }); // xz plane + 1
+                    addPoly({ {x, y + 1, z}, {x + 1, y + 1, z}, {x + 1, y + 1, z + 1}, {x, y + 1, z + 1} }, y + 1.0); // xz plane + 1
                 if (!cubeModel.nextCubeAlongZAxis(cube)) // if next cube in Z direction is empty, add a face.
-                    addPoly({ {x, y, z + 1}, {x + 1, y, z + 1}, {x + 1, y + 1, z + 1}, {x, y + 1, z + 1} }); // xy plane + 1
+                    addPoly({ {x, y, z + 1}, {x + 1, y, z + 1}, {x + 1, y + 1, z + 1}, {x, y + 1, z + 1} }, z + 1.0); // xy plane + 1
                 if (!cubeModel.nextCubeAlongXAxis(cube)) // if next cube in X direction is empty, add a face.
-                    addPoly({ {x + 1, y, z}, {x + 1, y + 1, z}, {x + 1, y + 1, z + 1}, {x + 1, y, z + 1} }); // yz plane + 1                    
+                    addPoly({ {x + 1, y, z}, {x + 1, y + 1, z}, {x + 1, y + 1, z + 1}, {x + 1, y, z + 1} }, x + 1.0); // yz plane + 1
             }
             cube++;
         }

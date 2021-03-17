@@ -105,11 +105,37 @@ void draw_polygon(const vector<LineSegment2D> &polygon, cairo_t *cr, double scal
     }
 }
 
+//https://stackoverflow.com/questions/26848694/cairo-flips-a-drawing
+static void invertYCoordinateSystem(cairo_t* cr)
+{
+    cairo_matrix_t x_reflection_matrix;
+    cairo_matrix_init_identity(&x_reflection_matrix); // could not find a oneliner
+                                                      /* reflection through the x axis equals the identity matrix with the bottom
+                                                      left value negated  */
+    x_reflection_matrix.yy = -1.0;
+    cairo_set_matrix(cr, &x_reflection_matrix);
+    // This would result in your drawing being done on top of the destination
+    // surface, so we translate the surface down the full height
+    cairo_translate(cr, 0, desiredSize); // replace SURFACE_HEIGHT
+}
+
 void drawPolygonsToFileHelper(string filename, GetNextPolygonCallback callback, void *ctx, const LineSegment2D **slices)
 {
     cairo_surface_t *surface;
     cairo_t *cr;
     Rectangle rect = getBounds(callback, ctx);
+
+    if (slices)
+    {
+        const LineSegment2D** slice = slices;
+        while (*slice)
+        {
+            rect += (*slice)->first;
+            rect += (*slice)->second;
+            slice++;
+        }
+    }
+
     double xExtent = rect.max.x - rect.min.x;
     double yExtent = rect.max.y - rect.min.y;
     double padding;
@@ -132,36 +158,43 @@ void drawPolygonsToFileHelper(string filename, GetNextPolygonCallback callback, 
     cairo_svg_surface_set_document_unit(surface, CAIRO_SVG_UNIT_PX);
 
     cr = cairo_create(surface);
-    cairo_set_line_width(cr, line_width);
 
-    uint32_t count = 0;
-    while (auto poly = callback(ctx))
-    {
-        set_color_based_on_polygon(cr, *poly, count++);
-        draw_polygon(shrink_polygon(*poly, shrink / scale), cr, scale, rect, padding);
-    }
+    //did not work...
+    //invertYCoordinateSystem(cr);
+
+    cairo_set_line_width(cr, line_width / 2.0);
 
     if (slices)
     {
-        const LineSegment2D* slice;
-        while (slice = *slices++)
+        const LineSegment2D** slicePtr = slices;
+        while (*slicePtr)
         {
-            if (slice->surface)
+            const LineSegment2D& slice = **slicePtr;
+            if (slice.surface)
             {
-                Color c = slice->surface->getRGB();
+                Color c = slice.surface->getRGB();
                 cairo_set_source_rgba(cr, c.R / 255.0, c.G / 255.0, c.B / 255.0, 0.5);
             }
             else
             {
                 cairo_set_source_rgba(cr, 0, 0, 0, 0.5);
             }
-            cairo_move_to(cr, scale * (slice->first.x - rect.min.x + padding), scale * (slice->first.y - rect.min.y + padding));
-            cairo_line_to(cr, scale * (slice->second.x - rect.min.x + padding), scale * (slice->second.y - rect.min.y + padding));
+            cairo_move_to(cr, scale * (slice.first.x - rect.min.x + padding), scale * (slice.first.y - rect.min.y + padding));
+            cairo_line_to(cr, scale * (slice.second.x - rect.min.x + padding), scale * (slice.second.y - rect.min.y + padding));
             cairo_stroke(cr);
 
-            draw_dot(cr, scale, slice->first, rect, padding);
-            draw_dot(cr, scale, slice->second, rect, padding);
+            draw_dot(cr, scale, slice.first, rect, padding);
+            draw_dot(cr, scale, slice.second, rect, padding);
+            slicePtr++;
         }
+    }
+
+    cairo_set_line_width(cr, line_width);
+    uint32_t count = 0;
+    while (auto poly = callback(ctx))
+    {
+        set_color_based_on_polygon(cr, *poly, count++);
+        draw_polygon(shrink_polygon(*poly, shrink / scale), cr, scale, rect, padding);
     }
 
     cairo_destroy(cr);
